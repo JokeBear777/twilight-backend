@@ -29,6 +29,9 @@ public class FreeBoardPost {
     @JoinColumn(name = "member_id")
     private Member member;
 
+    @Column(name = "title", nullable = false)
+    private String title;
+
     @Lob
     @Column(name = "content",nullable = false)
     private String content;

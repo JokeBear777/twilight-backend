@@ -23,7 +23,7 @@ public class FreeBoardPostReply {
     @Id
     @Column(name = "free_board_post_reply_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer freeBoardPostReplyId;
+    private Long freeBoardPostReplyId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")

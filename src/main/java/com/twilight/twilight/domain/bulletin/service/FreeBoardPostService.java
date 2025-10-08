@@ -1,16 +1,15 @@
 package com.twilight.twilight.domain.bulletin.service;
 
-import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostDto;
-import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
+import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostDetailDto;
+import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostListDto;
+import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostQueryRepository;
 import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRepository;
-import lombok.Builder;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -19,6 +18,7 @@ import java.util.List;
 public class FreeBoardPostService {
 
     private final FreeBoardPostRepository freeBoardPostRepository;
+    private final FreeBoardPostQueryRepository freeBoardPostQueryRepository;
     private final StringRedisTemplate redisTemplate;
     private static int numberOfPostPerPage = 8; //페이지당 글 몇개씩 보여줄건지
 
@@ -33,14 +33,18 @@ public class FreeBoardPostService {
     }
 
     //일단 8개씩 준다
-    public List<GetFreeBoardPostDto> getFreeBoardPosts() {
-
-        //List<FreeBoardPost> freeBoardPosts = freeBoardPostRepository.findBy
-
-        //List<GetFreeBoardPostDto> freeBoardPostDtos =
-
-
-        return null;
+    public List<GetFreeBoardPostListDto> getFreeBoardPosts() {
+        return freeBoardPostQueryRepository.findTopNByOrderByCreatedAtDesc(numberOfPostPerPage);
     }
+
+    public GetFreeBoardPostDetailDto getFreeBoardPostDetail(Long postId) {
+        return freeBoardPostRepository.findByFreeBoardPostId(postId)
+                .map(GetFreeBoardPostDetailDto::fromEntity)
+                .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
+    }
+
+
+
+
 
 }

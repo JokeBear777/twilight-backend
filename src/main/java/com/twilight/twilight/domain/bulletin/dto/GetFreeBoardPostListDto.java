@@ -1,6 +1,5 @@
 package com.twilight.twilight.domain.bulletin.dto;
 
-import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,21 +9,23 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class GetFreeBoardPostDto {
+public class GetFreeBoardPostListDto {
 
     private Long freeBoardPostId;
 
     private Long memberId;
 
-    private String content;
+    private String title;
 
-    private int totalPostCount; //이거 기반으로 뷰에서 1/2/3.....이런식으로 게시판 페이지 생성
+    private String content; //일부만 보낼까나, 어짜피 리스트니까
+    
+    private String name; //추후 닉네임으로 변경할수도
 
     private int views;
 
-    private int numberOfRecommendations = 0;
+    private int numberOfRecommendations;
 
-    private int numberOfComments = 0;
+    private int numberOfComments;
 
     private LocalDateTime createdAt;
 
