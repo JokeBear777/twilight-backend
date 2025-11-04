@@ -23,13 +23,13 @@ public class FreeBoardViewController {
 
     @GetMapping("/list")
     private String freeBoardList(
-            @AuthenticationPrincipal CustomUserDetails userDetails
-            ,Model model) {
-        List<GetFreeBoardPostListDto> list = freeBoardPostService.getFreeBoardPosts();
-        model.addAttribute("post_list", list);
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model) {
+        List<GetFreeBoardPostListDto> list = freeBoardPostService.getFreeBoardPostsByStaticVariable();
+        model.addAttribute("postList", list);
         Long numberOfPosts = freeBoardPostService.getTotalPostCount();
-        model.addAttribute("post_count", numberOfPosts);
-        return "free-board-list";
+        model.addAttribute("postCount", numberOfPosts);
+        return "bulletin/free-board-list";
     }
 
     @GetMapping("/{post-id}")
@@ -43,14 +43,14 @@ public class FreeBoardViewController {
         List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
         model.addAttribute("replies", dtoList);
 
-        return "bulletin-free-board-detail";
+        return "bulletin/free-board-post-detail";
     }
 
     @GetMapping("/write")
     private String writeFreeBoardForm(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return "bulletin-free-board-write";
+        return "bulletin/bulletin-free-board-write";
     }
 
     @PostMapping()
@@ -71,7 +71,7 @@ public class FreeBoardViewController {
         GetFreeBoardPostEditDto dto =
                 freeBoardPostService.getEditablePost(userDetails.getMember(), postId);
         model.addAttribute("postDetail", dto);
-        return "free-board-edit";
+        return "bulletin/free-board-edit";
     }
 
     @PostMapping("/{post-id}")

@@ -27,6 +27,7 @@ public class FreeBoardPostQueryRepository {
         return query
                 .select(Projections.constructor(GetFreeBoardPostListDto.class,
                         qFreeBoardPost.freeBoardPostId,
+                        qMember.memberId,
                         qFreeBoardPost.title,
                         qFreeBoardPost.content,
                         qMember.memberName,

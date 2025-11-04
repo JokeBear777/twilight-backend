@@ -1,8 +1,10 @@
 package com.twilight.twilight.domain.bulletin.controller;
 
 import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostListDto;
+import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
+import com.twilight.twilight.global.config.BulletinPageProps;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,11 +23,17 @@ import java.util.List;
 public class BulletinViewController {
 
     private final FreeBoardPostService freeBoardPostService;
+    private final BulletinPageProps bulletinPageProps;
 
     @GetMapping()
-    public String bulletin() {
-
-        return "bulletin";
+    public String bulletin(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model
+    ) {
+        List<GetFreeBoardPostListDto> freeBoardPostList = freeBoardPostService.getFreeBoardPosts(bulletinPageProps.getPostSize());
+        model.addAttribute("freeBoardPostList", freeBoardPostList);
+        //뷰에서 타임리프로 모델 데이터들 받자
+        return "bulletin/bulletin";
     }
 
 }

@@ -6,6 +6,7 @@ import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostQueryReposi
 import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRepository;
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
+import com.twilight.twilight.global.config.FreeBoardPageProps;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,8 +26,7 @@ public class FreeBoardPostService {
     private final FreeBoardPostRepository freeBoardPostRepository;
     private final FreeBoardPostQueryRepository freeBoardPostQueryRepository;
     private final StringRedisTemplate redisTemplate;
-    private static int numberOfPostPerPage = 8; //페이지당 글 몇개씩 보여줄건지
-    private static int numberOfReplyPerPage = 10; //일단 최대 10개의 최신글을 보여주자
+    private final FreeBoardPageProps pageProps;
 
     private static final String TOTAL_COUNT_KEY = "freeBoard:totalCount";
 
@@ -38,9 +38,12 @@ public class FreeBoardPostService {
         return count;
     }
 
-    //일단 8개씩 준다
-    public List<GetFreeBoardPostListDto> getFreeBoardPosts() {
-        return freeBoardPostQueryRepository.findTopNByOrderByCreatedAtDesc(numberOfPostPerPage);
+    public List<GetFreeBoardPostListDto> getFreeBoardPosts(int count) {
+        return freeBoardPostQueryRepository.findTopNByOrderByCreatedAtDesc(count);
+    }
+
+    public List<GetFreeBoardPostListDto> getFreeBoardPostsByStaticVariable() {
+        return freeBoardPostQueryRepository.findTopNByOrderByCreatedAtDesc(pageProps.getPostSize());
     }
 
     public GetFreeBoardPostDetailDto getFreeBoardPostDetail(Long postId) {
@@ -50,7 +53,7 @@ public class FreeBoardPostService {
     }
 
     public List<GetFreeBoardPostReplyDto> getFreeBoardPostReplies(Long postId) {
-        return freeBoardPostQueryRepository.findTopNRepliesOrderByCreatedAtDesc(postId, numberOfReplyPerPage);
+        return freeBoardPostQueryRepository.findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
     }
 
     public void savePost(Member member, FreeBoardPostForm form ) {
