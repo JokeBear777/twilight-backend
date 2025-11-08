@@ -161,3 +161,6 @@ CREATE TABLE `answer_tag_mapping` (
                                       CONSTRAINT `FKmtbc1f32nnf8ydkstkt2iqin5` FOREIGN KEY (`member_question_answer_id`) REFERENCES `member_question_answer` (`member_question_answer_id`),
                                       CONSTRAINT `FKtnbl6jjwc1lbbtq32lisjqub6` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`tag_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+

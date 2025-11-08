@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>게시글 상세</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        @font-face {
+            font-family: 'CookieRun-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'CookieRun-Regular', sans-serif;
+            background: #e6dcd0;
+            margin: 0;
+        }
+
+        .card-main-container {
+            width: 375px;
+            height: 650px;
+            /* ✅ 고정 크기 유지 */
+            background-color: #fffaf6;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: 2px solid #d6ccc2;
+            overflow: hidden;
+            /* ✅ 카드 밖으로 넘치지 않도록 */
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem 0.2rem 1.5rem;
+            background-color: transparent;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #5e4633;
+            flex: 0 0 auto;
+        }
+
+        /* ✅ 스크롤 영역: 내용이 길면 여기서만 스크롤 */
+        .scroll-area {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            /* iOS 부드러운 스크롤 */
+            padding-bottom: .5rem;
+            /* footer와 간격 */
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 0rem;
+            color: #8a7a6a;
+            font-size: .85rem;
+            padding: 0 .9rem 1rem;
+        }
+
+        .meta-sep {
+            color: #c2b6a3;
+            margin: 0 .35rem;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 550;
+            color: #3e2f20;
+            padding: 0.4rem .9rem .25rem;
+            word-break: keep-all;
+        }
+
+        .content {
+            white-space: pre-wrap;
+            /* 줄바꿈/공백 보존 */
+            color: #3e2f20;
+            background: #fffaf6;
+            border-top: 1px solid #d6ccc2;
+            border-bottom: 1px solid #d6ccc2;
+            padding: 1rem .9rem;
+            line-height: 1.5;
+            word-break: break-word;
+            padding-bottom: 2.5rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: .5rem;
+            padding: .75rem .75rem 0;
+            position: sticky;
+            /* 스크롤 중에도 상단에 고정 */
+            top: 0;
+            background: linear-gradient(#fffaf6, #fffaf6);
+            z-index: 2;
+        }
+
+        .footer-nav {
+            background-color: #ead4c5;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 1.5rem;
+            flex: 0 0 auto;
+            /* ✅ 하단 고정 영역 */
+        }
+
+        .footer-nav .btn-dark {
+            background: transparent;
+            border: none;
+            color: #4e3b31;
+            flex: 1;
+        }
+
+        .footer-nav .btn-dark.active {
+            color: #c45b5b;
+        }
+
+        .footer-nav .btn-dark i {
+            font-size: 1.2rem;
+            margin-bottom: .25rem;
+        }
+
+        .footer-nav .btn-dark small {
+            font-size: .75rem;
+        }
+
+        /* 댓글 */
+        .comments-wrap {
+            padding: .75rem .75rem 1rem;
+        }
+
+        .comment-item {
+            padding: .6rem .4rem;
+            border-bottom: 1px solid #e9dfd5;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-meta {
+            color: #8a7a6a;
+            font-size: .8rem;
+        }
+    </style>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card-main-container">
+
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>게시글 상세</span>
+            <a th:href="@{/bulletin/free-board/list}" class="btn btn-sm btn-outline-secondary" style="border-radius:.6rem;">목록</a>
+        </div>
+
+        <!-- ✅ 스크롤 되는 본문 영역 시작 -->
+        <div class="scroll-area">
+            <!-- 액션 버튼 (sticky) -->
+            <div class="actions">
+                <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/recommend|}" method="post" class="mr-1">
+                    <button type="submit" class="btn" style="background-color:#8b5e34;color:#fff;border-radius:.6rem;">
+                        <i class="fa-regular fa-thumbs-up"></i> 추천
+                    </button>
+                </form>
+
+                <a th:if="${post.memberId == memberId}" th:href="@{|/bulletin/free-board/edit/${post.freeBoardPostId}|}"
+                   class="btn btn-outline-secondary" style="border-radius:.6rem;">
+                    <i class="fa-regular fa-pen-to-square"></i> 수정
+                </a>
+
+                <form th:if="${post.memberId == memberId}"
+                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/delete|}" method="post" class="ml-auto"
+                      onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                    <button type="submit" class="btn btn-outline-danger" style="border-radius:.6rem;">
+                        <i class="fa-regular fa-trash-can"></i> 삭제
+                    </button>
+                </form>
+            </div>
+
+            <!-- 제목 -->
+            <h1 class="title" th:text="${post.title}">제목을 무엇으로 할까요?</h1>
+
+            <!-- 메타 정보 -->
+            <div class="meta-row">
+                <span><i class="fa-regular fa-user"></i> <span th:text="${post.name}">작성자</span></span>
+                <span class="meta-sep">|</span>
+                <span><i class="fa-regular fa-clock"></i> <span
+                        th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">2025.11.06 12:34</span></span>
+                <span class="meta-sep">|</span>
+                <span><i class="fa-regular fa-eye"></i> <span th:text="${post.views}">0</span></span>
+                <span class="meta-sep">|</span>
+                <span><i class="fa-regular fa-thumbs-up"></i> <span th:text="${post.numberOfRecommendations}">0</span></span>
+                <span class="meta-sep">|</span>
+                <span><i class="fa-regular fa-comments"></i> <span th:text="${post.numberOfComments}">0</span></span>
+            </div>
+
+            <!-- 본문 -->
+            <div class="content" th:text="${post.content}">내용 본문입니다. 이곳에 글이 올라갈 것입니다. 가나다라마바사아자차카타파하
+                <br>
+                <br>
+            </div>
+
+            <!-- 댓글 영역 (옵션) -->
+            <div class="comments-wrap">
+                <h2 style="font-size:1rem;color:#5e4633;margin-bottom:.5rem;">댓글 <span
+                        th:text="${post.numberOfComments}">0</span></h2>
+                <div th:if="${replies != null}">
+                    <div th:if="${#lists.isEmpty(comments)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
+                    <div th:each="c : ${replies}" class="comment-item">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <strong th:text="${c.replyWriterName}">사용자</strong>
+                            <span class="comment-meta" th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                        </div>
+                        <div th:text="${c.content}">댓글 내용</div>
+                    </div>
+                </div>
+                <div th:if="${comments == null}" class="text-center text-muted p-2">댓글 데이터를 불러오지 않았습니다.</div>
+
+                <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/comments|}" method="post" class="mt-2">
+                    <div class="form-group mb-2">
+              <textarea name="content" rows="3" class="form-control" placeholder="댓글을 입력하세요"
+                        style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-block"
+                            style="background-color:#8b5e34;color:#fff;font-weight:600;border-radius:.6rem;">
+                        댓글 등록
+                    </button>
+                </form>
+            </div>
+        </div>
+        <!-- ✅ 스크롤 되는 본문 영역 끝 -->
+
+        <!-- 하단 네비게이션 (카드 고정) -->
+        <nav class="footer-nav d-flex justify-content-around text-white">
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/home'">
+                <i class="fas fa-home"></i><small>홈</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/record'">
+                <i class="fas fa-book"></i><small>내 서재</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center"
+                    onclick="location.href='/book/recommendation'">
+                <i class="fas fa-search"></i><small>책 추천</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center active" onclick="location.href='/bulletin'">
+                <i class="fas fa-comments"></i><small>게시판</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/mypage'">
+                <i class="fas fa-user"></i><small>내 정보</small>
+            </button>
+        </nav>
+
+    </div>
+</section>
+</body>
+
+</html>

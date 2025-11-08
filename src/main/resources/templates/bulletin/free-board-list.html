@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>홈화면</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        @font-face {
+            font-family: 'CookieRun-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'CookieRun-Regular', sans-serif;
+            background: #e6dcd0;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card-main-container {
+            width: 375px;
+            height: 650px;
+            background-color: #fffaf6;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: 2px solid #d6ccc2;
+            /* ✅ 100vw 밑줄이 잘리지 않도록 */
+            overflow: visible;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem 0.2rem 1.5rem;
+            background-color: transparent;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #5e4633;
+        }
+
+        /* ✅ 위→아래로 쌓이고, 가로는 꽉 채움 */
+        .card-body-center {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            /* 위에서부터 */
+            align-items: stretch;
+            /* 가로 꽉 채우기 */
+            padding: 0;
+            /* 리스트가 자체 패딩 갖도록 0 */
+            text-align: left;
+        }
+
+        .free-board-post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            /* 밑줄로 구분하니 간격은 0 */
+        }
+
+        /* ⬇ 개별 게시글 줄 */
+        .notice-item {
+            position: relative;
+            /* ::after 기준 */
+            display: flex;
+            flex-direction: column;
+            padding: 0.8rem 1rem;
+            /* 좌우 패딩은 카드 안쪽 여백 */
+            background: #fffaf6;
+            /* 카드 배경과 동일 */
+        }
+
+        /* ✅ 스마트폰 화면 전체폭 밑줄 */
+        .notice-item::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%; /* ✅ 카드 안쪽 폭만 사용 */
+            border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .notice-item:last-child::after {
+            border-bottom: none;
+        }
+
+        /* 첫 줄: [댓글수] 제목 */
+        .post-top {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .comment-count {
+            font-weight: bold;
+            color: #8b5e34;
+        }
+
+        .post-title {
+            flex: 1;
+            /* 남는 공간 차지 */
+            min-width: 0;
+            /* 말줄임 처리를 위해 */
+            display: block;
+            /* flex item이라 같은 줄 유지 */
+            color: #3e2f20;
+            text-decoration: none;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .post-title:hover {
+            text-decoration: underline;
+        }
+
+        /* 두 번째 줄: 시간 | 작성자 | 조회 | 추천 */
+        .post-bottom {
+            font-size: 0.8rem;
+            color: #8a7a6a;
+            margin-left: 1.6rem;
+            /* 댓글수 영역만큼 살짝 들여쓰기 */
+        }
+
+        .separator {
+            margin: 0 0.3rem;
+            color: #c2b6a3;
+        }
+
+        .footer-nav {
+            background-color: #ead4c5;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 1.5rem;
+        }
+
+        .footer-nav .btn-dark {
+            background: transparent;
+            border: none;
+            color: #4e3b31;
+            flex: 1;
+        }
+
+        .footer-nav .btn-dark.active {
+            color: #c45b5b;
+        }
+
+        .footer-nav .btn-dark i {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .footer-nav .btn-dark small {
+            font-size: 0.75rem;
+        }
+    </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const postList = document.getElementById("post-list");
+            const posts = postList.querySelectorAll(".notice-item");
+
+            if (posts.length === 0) {
+                const emptyMessage = document.createElement("p");
+                emptyMessage.textContent = "게시글이 없습니다.";
+                emptyMessage.style.textAlign = "center";
+                emptyMessage.style.color = "#777";
+                emptyMessage.style.margin = "2rem 0";
+                postList.appendChild(emptyMessage);
+            }
+        });
+    </script>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card-main-container">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>📌 자유게시판</span>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center"
+                        style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">
+                    <i class="fas fa-search mr-1"></i>검색
+                </button>
+
+                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center"
+                        style="padding: 0.25rem 0.6rem; font-size: 0.8rem;"
+                        onclick="location.href='/bulletin/free-board/write'">
+                    <i class="fas fa-pen mr-1"></i>글쓰기
+                </button>
+            </div>
+        </div>
+
+
+        <div class="card-body-center">
+            <!-- ✅ 테스트용 더미 데이터 (배포 시 제거) -->
+            <div class="free-board-post-list" id="post-list">
+
+                <!--
+             th:with="freeBoardPostList=${[
+   {'id':1,'title':'첫 글입니다','commentCount':12,'timeAgo':'3분 전','writer':'민우','viewCount':123,'likeCount':7},
+   {'id':2,'title':'두 번째 테스트 글','commentCount':3,'timeAgo':'7분 전','writer':'홍길동','viewCount':45,'likeCount':2},
+   {'id':3,'title':'세 번째 글입니다 제목이 길면 이렇게 길어져도 말줄임으로 깔끔하게 처리됩니다','commentCount':0,'timeAgo':'12분 전','writer':'Alice','viewCount':9,'likeCount':0},
+   {'id':4,'title':'네 번째 글 - 모바일에선 밑줄이 화면 끝까지!','commentCount':8,'timeAgo':'20분 전','writer':'Bob','viewCount':88,'likeCount':10}
+ ]}">
+-->
+                <div th:each="post : ${postList}" class="notice-item">
+                    <!-- 첫 줄: 댓글 수 | 제목 -->
+                    <div class="post-top">
+                        <span class="comment-count" th:text="${post.numberOfComments}">12</span>
+                        <a class="post-title" th:href="@{/bulletin/free-board/{id}(id=${post.freeBoardPostId})}"
+                           th:text="${post.title}">[TEST] 제목입니다. 1</a>
+                    </div>
+
+                    <!-- 두 번째 줄: | x분전 | 글쓴이 | 조회 | 추천 -->
+                    <div class="post-bottom">
+                        <span class="post-time"
+                              th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2022-03-12 12:23</span>
+                        <span class="separator">|</span>
+                        <span class="post-writer" th:text="${post.name}">작성자</span>
+                        <span class="separator">|</span>
+                        <span class="post-view" th:text="'조회 ' + ${post.views}">조회 12</span>
+                        <span class="separator">|</span>
+                        <span class="post-like" th:text="'추천 ' + ${post.numberOfRecommendations}">추천 5</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <nav class="footer-nav d-flex justify-content-around text-white">
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/home'">
+                <i class="fas fa-home"></i><small>홈</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/record'">
+                <i class="fas fa-book"></i><small>내 서재</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center"
+                    onclick="location.href='/book/recommendation'">
+                <i class="fas fa-search"></i><small>책 추천</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center active"
+                    onclick="location.href='/bulletin'">
+                <i class="fas fa-comments"></i><small>게시판</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/mypage'">
+                <i class="fas fa-user"></i><small>내 정보</small>
+            </button>
+        </nav>
+    </div>
+</section>
+</body>
+
+</html>
