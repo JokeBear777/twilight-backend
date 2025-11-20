@@ -22,6 +22,7 @@ public class FreeBoardPostQueryRepository {
     QFreeBoardPost qFreeBoardPost = QFreeBoardPost.freeBoardPost;
     QMember qMember = QMember.member;
     QFreeBoardPostReply qFreeBoardPostReply = QFreeBoardPostReply.freeBoardPostReply;
+    QFreeBoardPostReply parent = new QFreeBoardPostReply("parent");
 
     public List<GetFreeBoardPostListDto> findTopNByOrderByCreatedAtDesc(int number) {
         return query
@@ -47,15 +48,16 @@ public class FreeBoardPostQueryRepository {
         return query
                 .select(Projections.constructor(GetFreeBoardPostReplyDto.class,
                         qFreeBoardPostReply.freeBoardPostReplyId,
-                        qFreeBoardPostReply.parentReply,
+                        parent.freeBoardPostReplyId,
                         qMember.memberName,
                         qFreeBoardPostReply.content,
                         qFreeBoardPostReply.createdAt,
                         qFreeBoardPostReply.updatedAt
                         ))
                 .from(qFreeBoardPostReply)
-                .where(qFreeBoardPostReply.freeBoardPostReplyId.eq(postId))
+                .where(qFreeBoardPostReply.freeBoardPost.freeBoardPostId.eq(postId))
                 .join(qFreeBoardPostReply.member,member)
+                .leftJoin(qFreeBoardPostReply.parentReply, parent)
                 .orderBy(qFreeBoardPostReply.createdAt.desc())
                 .limit(count)
                 .fetch();

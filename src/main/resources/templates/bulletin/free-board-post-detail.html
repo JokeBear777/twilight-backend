@@ -137,7 +137,7 @@
         }
 
         /* 댓글 */
-        .comments-wrap {
+        .replies-wrap {
             padding: .75rem .75rem 1rem;
         }
 
@@ -214,25 +214,33 @@
             </div>
 
             <!-- 댓글 영역 (옵션) -->
-            <div class="comments-wrap">
-                <h2 style="font-size:1rem;color:#5e4633;margin-bottom:.5rem;">댓글 <span
-                        th:text="${post.numberOfComments}">0</span></h2>
+            <div class="replies-wrap"
+                 th:fragment="replies"
+                 id="replies-wrap">
+                <h2 style="font-size:1rem;color:#5e4633;margin-bottom:.5rem;">
+                    댓글 <span th:text="${post.numberOfComments}">0</span>
+                </h2>
+
                 <div th:if="${replies != null}">
-                    <div th:if="${#lists.isEmpty(comments)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
+                    <div th:if="${#lists.isEmpty(replies)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
                     <div th:each="c : ${replies}" class="comment-item">
                         <div class="d-flex align-items-center justify-content-between">
                             <strong th:text="${c.replyWriterName}">사용자</strong>
-                            <span class="comment-meta" th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                            <span class="comment-meta"
+                                  th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
                         </div>
                         <div th:text="${c.content}">댓글 내용</div>
                     </div>
                 </div>
-                <div th:if="${comments == null}" class="text-center text-muted p-2">댓글 데이터를 불러오지 않았습니다.</div>
+                <div th:if="${replies == null}" class="text-center text-muted p-2">댓글 데이터를 불러오지 않았습니다.</div>
 
-                <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/comments|}" method="post" class="mt-2">
+                <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply|}"
+                      method="post"
+                      class="mt-2"
+                      id="comment-form">
                     <div class="form-group mb-2">
-              <textarea name="content" rows="3" class="form-control" placeholder="댓글을 입력하세요"
-                        style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;" required></textarea>
+            <textarea name="content" rows="3" class="form-control" placeholder="댓글을 입력하세요"
+                      style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-block"
                             style="background-color:#8b5e34;color:#fff;font-weight:600;border-radius:.6rem;">
@@ -240,6 +248,9 @@
                     </button>
                 </form>
             </div>
+
+
+
         </div>
         <!-- ✅ 스크롤 되는 본문 영역 끝 -->
 
@@ -265,6 +276,53 @@
 
     </div>
 </section>
+<script>
+    function bindReplyForm() {
+        const form = document.getElementById('comment-form');
+        const repliesWrap = document.getElementById('replies-wrap');
+
+        if (!form || !repliesWrap) return;
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault(); // 기본 동작(페이지 이동) 막기
+
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!res.ok) {
+                    alert('댓글 등록 중 오류가 발생했습니다.');
+                    return;
+                }
+
+                const html = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newRepliesWrap = doc.querySelector('.replies-wrap');
+
+                if (newRepliesWrap) {
+                    // 기존 요소 다시 찾아서 교체 (id 유지)
+                    const current = document.getElementById('replies-wrap');
+                    current.replaceWith(newRepliesWrap);
+                    // 🔥 새로 그려진 폼에 다시 이벤트 바인딩
+                    bindReplyForm();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('네트워크 오류가 발생했습니다.');
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', bindReplyForm);
+</script>
 </body>
 
 </html>

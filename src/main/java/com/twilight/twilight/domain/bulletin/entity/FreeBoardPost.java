@@ -62,8 +62,12 @@ public class FreeBoardPost {
         this.views++;
     }
 
-    public void increaseNumberOfComments() {
+    public void increaseNumberOfRecommendations() {
         this.numberOfRecommendations++;
+    }
+
+    public void increaseNumberOfComments() {
+        this.numberOfComments++;
     }
 
 }

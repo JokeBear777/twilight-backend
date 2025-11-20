@@ -46,6 +46,7 @@ public class FreeBoardViewController {
         return "bulletin/free-board-post-detail";
     }
 
+
     @PostMapping("/{post-id}/recommend")
     private String increaseRecommendation(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -104,5 +105,24 @@ public class FreeBoardViewController {
         return "redirect:/bulletin/free-board/list";
     }
 
+    //리플 부분
+    @PostMapping("/{post-id}/reply")
+    private String addComment(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            Model model,
+            @ModelAttribute FreeBoardPostReplyForm form
+    ) {
+        freeBoardPostService.postFreeBoardReply(postId, userDetails.getMember(), form);
+
+        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
+
+        model.addAttribute("post", postDetailDto);
+        model.addAttribute("replies", dtoList);
+
+        //return "bulletin/free-board-post-detail :: replies-wrap";
+        return "bulletin/free-board-post-detail :: replies";
+    }
 
 }

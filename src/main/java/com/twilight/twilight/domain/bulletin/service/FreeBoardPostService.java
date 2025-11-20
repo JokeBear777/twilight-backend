@@ -3,14 +3,17 @@ package com.twilight.twilight.domain.bulletin.service;
 import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostRecommendation;
+import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostReply;
 import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostQueryRepository;
 import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRecommendationRepository;
+import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostReplyRepository;
 import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRepository;
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class FreeBoardPostService {
 
     private final FreeBoardPostRepository freeBoardPostRepository;
@@ -30,6 +34,7 @@ public class FreeBoardPostService {
     private final StringRedisTemplate redisTemplate;
     private final FreeBoardPageProps pageProps;
     private final FreeBoardPostRecommendationRepository freeBoardPostRecommendationRepository;
+    private final FreeBoardPostReplyRepository freeBoardPostReplyRepository;
 
     private static final String TOTAL_COUNT_KEY = "freeBoard:totalCount";
 
@@ -60,7 +65,18 @@ public class FreeBoardPostService {
     }
 
     public List<GetFreeBoardPostReplyDto> getFreeBoardPostReplies(Long postId) {
-        return freeBoardPostQueryRepository.findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
+        List<GetFreeBoardPostReplyDto> dtoList
+                = freeBoardPostQueryRepository.findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
+        log.info("list size = {}", (dtoList != null ? dtoList.size() : null));
+        return dtoList;
+    }
+
+    public List<GetFreeBoardPostReplyDto> getFreeBoardPostAllReplies(Long postId) {
+        return freeBoardPostReplyRepository.findByFreeBoardPost_FreeBoardPostId(postId).stream()
+                .map(reply -> {
+                    return GetFreeBoardPostReplyDto.fromEntity(reply);
+                })
+                .toList();
     }
 
     @Transactional
@@ -122,13 +138,28 @@ public class FreeBoardPostService {
         }
 
         
-        post.increaseNumberOfComments();
+        post.increaseNumberOfRecommendations();
         freeBoardPostRepository.save(post);
 
         freeBoardPostRecommendationRepository.save(
                 FreeBoardPostRecommendation.builder()
                         .post(post)
                         .member(member)
+                        .build()
+        );
+    }
+
+    @Transactional
+    public void postFreeBoardReply(Long postId, Member member, FreeBoardPostReplyForm form) {
+        FreeBoardPost post = freeBoardPostRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
+        post.increaseNumberOfComments();
+
+        freeBoardPostReplyRepository.save(
+                FreeBoardPostReply.builder()
+                        .member(member)
+                        .freeBoardPost(post)
+                        .content(form.getContent())
                         .build()
         );
     }
