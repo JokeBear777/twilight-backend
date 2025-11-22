@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface FreeBoardPostReplyRepository extends JpaRepository<FreeBoardPostReply, Long> {
     List<FreeBoardPostReply> findByFreeBoardPost_FreeBoardPostId(Long freeBoardPostId);
+    void deleteByFreeBoardPost_FreeBoardPostId(Long freeBoardPostId);
 }

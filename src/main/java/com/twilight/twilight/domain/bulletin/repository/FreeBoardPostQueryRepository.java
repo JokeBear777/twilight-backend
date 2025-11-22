@@ -50,6 +50,7 @@ public class FreeBoardPostQueryRepository {
                         qFreeBoardPostReply.freeBoardPostReplyId,
                         parent.freeBoardPostReplyId,
                         qMember.memberName,
+                        qMember.memberId,
                         qFreeBoardPostReply.content,
                         qFreeBoardPostReply.createdAt,
                         qFreeBoardPostReply.updatedAt

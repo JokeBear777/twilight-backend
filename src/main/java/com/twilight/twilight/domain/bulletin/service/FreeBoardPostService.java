@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -65,8 +67,12 @@ public class FreeBoardPostService {
     }
 
     public List<GetFreeBoardPostReplyDto> getFreeBoardPostReplies(Long postId) {
-        List<GetFreeBoardPostReplyDto> dtoList
-                = freeBoardPostQueryRepository.findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
+        List<GetFreeBoardPostReplyDto> dtoList =
+                freeBoardPostQueryRepository
+                        .findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
+
+        Collections.reverse(dtoList); // 역순으로 뒤집기 (내림 → 오름)
+
         log.info("list size = {}", (dtoList != null ? dtoList.size() : null));
         return dtoList;
     }
@@ -121,6 +127,8 @@ public class FreeBoardPostService {
             throw new AccessDeniedException("본인 또는 관리자만 삭제 할 수 있습니다.");
         }
 
+        freeBoardPostReplyRepository.deleteByFreeBoardPost_FreeBoardPostId(postId);
+
         freeBoardPostRepository.delete(post);
     }
 
@@ -162,6 +170,24 @@ public class FreeBoardPostService {
                         .content(form.getContent())
                         .build()
         );
+    }
+
+    @Transactional
+    public void deleteReply(Member member, Long replyId, Long postId) {
+
+        FreeBoardPost post = freeBoardPostRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시물을 찾을 수 없습니다. id=" + postId));
+
+        FreeBoardPostReply reply = freeBoardPostReplyRepository.findById(replyId)
+                .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다. id=" + replyId));
+
+        if (!reply.getMember().getMemberId().equals(member.getMemberId())) {
+            throw new AccessDeniedException("본인 또는 관리자만 삭제 할 수 있습니다.");
+        }
+
+        post.decreaseNumberOfComments();
+
+        freeBoardPostReplyRepository.delete(reply);
     }
 
 

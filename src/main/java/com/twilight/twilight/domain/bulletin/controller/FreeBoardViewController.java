@@ -22,7 +22,7 @@ public class FreeBoardViewController {
     private final FreeBoardPostService freeBoardPostService;
 
     @GetMapping("/list")
-    private String freeBoardList(
+    public String freeBoardList(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
         List<GetFreeBoardPostListDto> list = freeBoardPostService.getFreeBoardPostsByStaticVariable();
@@ -33,7 +33,7 @@ public class FreeBoardViewController {
     }
 
     @GetMapping("/{post-id}")
-    private String getFreeBoardDetail(
+    public String getFreeBoardDetail(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
             Model model
@@ -43,12 +43,13 @@ public class FreeBoardViewController {
         List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
         return "bulletin/free-board-post-detail";
     }
 
 
     @PostMapping("/{post-id}/recommend")
-    private String increaseRecommendation(
+    public String increaseRecommendation(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId
     ) {
@@ -58,14 +59,14 @@ public class FreeBoardViewController {
     }
 
     @GetMapping("/write")
-    private String writeFreeBoardForm(
+    public String writeFreeBoardForm(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return "bulletin/bulletin-free-board-write";
     }
 
     @PostMapping("/write")
-    private String writeFreeBoard(
+    public String writeFreeBoard(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @ModelAttribute FreeBoardPostForm form
             ) {
@@ -74,7 +75,7 @@ public class FreeBoardViewController {
     }
 
     @GetMapping("/{post-id}/edit")
-    private String editFreeBoardPostForm(
+    public String editFreeBoardPostForm(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
             Model model
@@ -86,7 +87,7 @@ public class FreeBoardViewController {
     }
 
     @PostMapping("/{post-id}")
-    private String editFreeBoardPost(
+    public String editFreeBoardPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
             @ModelAttribute FreeBoardPostForm form
@@ -95,8 +96,8 @@ public class FreeBoardViewController {
         return "redirect:/bulletin/free-board/list";
     }
 
-    @DeleteMapping("/{post-id}")
-    private String deleteFreeBoardPost(
+    @PostMapping("/{post-id}/delete")
+    public String deleteFreeBoardPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId
     ) {
@@ -105,9 +106,14 @@ public class FreeBoardViewController {
         return "redirect:/bulletin/free-board/list";
     }
 
-    //리플 부분
+    /*
+    *
+    * ************ 리플 부분 *************
+    *
+    *  */
+
     @PostMapping("/{post-id}/reply")
-    private String addComment(
+    public String addComment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
             Model model,
@@ -120,9 +126,29 @@ public class FreeBoardViewController {
 
         model.addAttribute("post", postDetailDto);
         model.addAttribute("replies", dtoList);
+        model.addAttribute("memberId", userDetails.getMember().getMemberId());
 
         //return "bulletin/free-board-post-detail :: replies-wrap";
         return "bulletin/free-board-post-detail :: replies";
     }
 
+    @PostMapping("/{post-id}/reply/{reply-id}/delete")
+    public String deleteReply(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            @PathVariable("reply-id") Long replyId,
+            Model model
+    ) {
+        freeBoardPostService.deleteReply(userDetails.getMember(), replyId, postId);
+
+        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
+
+        model.addAttribute("post", postDetailDto);
+        model.addAttribute("replies", dtoList);
+        model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+        return "bulletin/free-board-post-detail :: replies";
+    }
+    //삭제후 뷰 문제 해결해야함
 }

@@ -20,6 +20,8 @@ public class GetFreeBoardPostReplyDto {
 
     private String replyWriterName;
 
+    private Long memberId; //작성자
+
     private String content;
 
     private LocalDateTime createdAt;
@@ -31,6 +33,7 @@ public class GetFreeBoardPostReplyDto {
                 .freeBoardPostReplyId(reply.getFreeBoardPostReplyId())
                 .parentReplyId(reply.getParentReply().getFreeBoardPostReplyId())
                 .replyWriterName(reply.getMember().getMemberName())
+                .memberId(reply.getMember().getMemberId())
                 .content(reply.getContent())
                 .createdAt(reply.getCreatedAt())
                 .updatedAt(reply.getUpdatedAt())

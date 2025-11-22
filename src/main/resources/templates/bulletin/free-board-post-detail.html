@@ -154,6 +154,10 @@
             color: #8a7a6a;
             font-size: .8rem;
         }
+
+        .custom-modal {
+            max-width: 300px;
+        }
     </style>
 </head>
 
@@ -182,8 +186,9 @@
                 </a>
 
                 <form th:if="${post.memberId == memberId}"
-                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/delete|}" method="post" class="ml-auto"
-                      onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/delete|}"
+                      method="post"
+                      class="ml-auto post-delete-form">
                     <button type="submit" class="btn btn-outline-danger" style="border-radius:.6rem;">
                         <i class="fa-regular fa-trash-can"></i> 삭제
                     </button>
@@ -225,10 +230,25 @@
                     <div th:if="${#lists.isEmpty(replies)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
                     <div th:each="c : ${replies}" class="comment-item">
                         <div class="d-flex align-items-center justify-content-between">
-                            <strong th:text="${c.replyWriterName}">사용자</strong>
-                            <span class="comment-meta"
-                                  th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                            <div>
+                                <strong th:text="${c.replyWriterName}">사용자</strong>
+                                <span class="comment-meta"
+                                      th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                            </div>
+
+                            <!-- 삭제 버튼: 본인 댓글일 때만 -->
+                            <form th:if="${c.memberId == memberId}"
+                                  th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/delete|}"
+                                  method="post"
+                                  class="d-inline reply-delete-form" >
+                                  <!--onsubmit="return confirm('이 댓글을 삭제하시겠습니까?');"> -->
+                                <button type="submit"
+                                        class="btn btn-sm btn-link text-muted p-0">
+                                    ✕
+                                </button>
+                            </form>
                         </div>
+
                         <div th:text="${c.content}">댓글 내용</div>
                     </div>
                 </div>
@@ -275,53 +295,186 @@
         </nav>
 
     </div>
+
+    <!-- 댓글 삭제 확인 모달 (Bootstrap 4) -->
+    <div class="modal fade" id="replyDeleteModal" tabindex="-1" role="dialog" aria-labelledby="replyDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered custom-modal" role="document">
+            <div class="modal-content" style="border-radius:1rem;">
+                <div class="modal-header" style="border-bottom: none;">
+                    <h5 class="modal-title" id="replyDeleteModalLabel" style="color:#5e4633;font-weight:700;">
+                        댓글 삭제
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" style="color:#3e2f20;">
+                    정말 이 댓글을 삭제하시겠습니까?
+                </div>
+
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal" style="border-radius:.6rem;">
+                        취소
+                    </button>
+                    <button type="button" class="btn btn-danger" id="replyDeleteConfirmBtn" style="border-radius:.6rem;">
+                        삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 게시글 삭제 확인 모달 -->
+    <div class="modal fade" id="postDeleteModal" tabindex="-1" role="dialog"
+         aria-labelledby="postDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered custom-modal" role="document">
+            <div class="modal-content" style="border-radius:1rem;">
+                <div class="modal-header" style="border-bottom: none;">
+                    <h5 class="modal-title" id="postDeleteModalLabel"
+                        style="color:#5e4633;font-weight:700;">
+                        게시글 삭제
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" style="color:#3e2f20;">
+                    정말 이 게시글을 삭제하시겠습니까?
+                </div>
+
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-dismiss="modal" style="border-radius:.6rem;">
+                        취소
+                    </button>
+                    <button type="button" class="btn btn-danger"
+                            id="postDeleteConfirmBtn" style="border-radius:.6rem;">
+                        삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </section>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.min.js"></script>
 <script>
-    function bindReplyForm() {
-        const form = document.getElementById('comment-form');
+    function replaceRepliesFromHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newRepliesWrap = doc.querySelector('.replies-wrap');
+        if (!newRepliesWrap) return false;
+
+        const current = document.getElementById('replies-wrap');
+        current.replaceWith(newRepliesWrap);
+        return true;
+    }
+
+    let pendingDeleteForm = null; // ✅ 삭제 대상 form 저장
+
+    function bindReplyHandlers() {
         const repliesWrap = document.getElementById('replies-wrap');
+        if (!repliesWrap) return;
 
-        if (!form || !repliesWrap) return;
+        // 댓글 작성 AJAX
+        const form = document.getElementById('comment-form');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
 
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault(); // 기본 동작(페이지 이동) 막기
-
-            const formData = new FormData(form);
-
-            try {
                 const res = await fetch(form.action, {
                     method: 'POST',
                     body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
 
                 if (!res.ok) {
-                    alert('댓글 등록 중 오류가 발생했습니다.');
+                    alert('댓글 등록 중 오류');
                     return;
                 }
 
                 const html = await res.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newRepliesWrap = doc.querySelector('.replies-wrap');
+                replaceRepliesFromHtml(html);
+                bindReplyHandlers(); // 새 DOM에 다시 바인딩
+            });
+        }
 
-                if (newRepliesWrap) {
-                    // 기존 요소 다시 찾아서 교체 (id 유지)
-                    const current = document.getElementById('replies-wrap');
-                    current.replaceWith(newRepliesWrap);
-                    // 🔥 새로 그려진 폼에 다시 이벤트 바인딩
-                    bindReplyForm();
+        // 댓글 삭제 "요청 가로채기" → 모달 띄우기
+        repliesWrap.addEventListener('submit', (e) => {
+            const target = e.target;
+            if (!target.classList.contains('reply-delete-form')) return;
+
+            e.preventDefault();
+            pendingDeleteForm = target;                 // 어떤 댓글을 지울지 저장
+            $('#replyDeleteModal').modal('show');       // 모달 오픈
+        });
+    }
+
+    // 모달 "삭제" 버튼 눌렀을 때 실제 삭제 실행
+    document.addEventListener('DOMContentLoaded', () => {
+        bindReplyHandlers();
+
+        const confirmBtn = document.getElementById('replyDeleteConfirmBtn');
+        confirmBtn.addEventListener('click', async () => {
+            if (!pendingDeleteForm) return;
+
+            try {
+                const formData = new FormData(pendingDeleteForm);
+
+                const res = await fetch(pendingDeleteForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!res.ok) {
+                    alert('댓글 삭제 중 오류');
+                    return;
                 }
+
+                const html = await res.text();
+                replaceRepliesFromHtml(html);
+                bindReplyHandlers(); // 새 DOM에 다시 바인딩
+
+                $('#replyDeleteModal').modal('hide'); // 모달 닫기
+                pendingDeleteForm = null;
             } catch (err) {
                 console.error(err);
                 alert('네트워크 오류가 발생했습니다.');
             }
         });
-    }
+    });
 
-    document.addEventListener('DOMContentLoaded', bindReplyForm);
+    let pendingPostDeleteForm = null;
+
+    // 게시글 삭제 submit 가로채서 모달 띄우기
+    document.addEventListener('DOMContentLoaded', () => {
+        // 게시글 삭제 form 찾기
+        const postDeleteForm = document.querySelector('.post-delete-form');
+        if (postDeleteForm) {
+            postDeleteForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                pendingPostDeleteForm = postDeleteForm;
+                $('#postDeleteModal').modal('show');
+            });
+        }
+
+        // 모달에서 "삭제" 눌렀을 때 실제 form 제출
+        const postConfirmBtn = document.getElementById('postDeleteConfirmBtn');
+        postConfirmBtn.addEventListener('click', () => {
+            if (!pendingPostDeleteForm) return;
+
+            $('#postDeleteModal').modal('hide');
+            pendingPostDeleteForm.submit(); // 일반 submit으로 삭제 (리다이렉트 정상)
+            pendingPostDeleteForm = null;
+        });
+    });
 </script>
 </body>
 

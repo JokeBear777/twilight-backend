@@ -14,7 +14,7 @@ public class FreeBoardApiController {
 
     /*
     @GetMapping("{post-id}")
-    private ResponseEntity<List<GetFreeBoardPostReplyDto>>  getFreeBoardPost(
+    public ResponseEntity<List<GetFreeBoardPostReplyDto>>  getFreeBoardPost(
             @PathVariable(name = "post-id") Long postId) {
 
         return ResponseEntity.ok(freeBoardPostService.getFreeBoardPostReplies(postId));

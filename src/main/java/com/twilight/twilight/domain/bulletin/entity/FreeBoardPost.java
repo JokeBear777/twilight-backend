@@ -70,4 +70,11 @@ public class FreeBoardPost {
         this.numberOfComments++;
     }
 
+    public void decreaseNumberOfComments() {
+        this.numberOfComments--;
+        if (this.numberOfComments < 0) {
+            throw new IllegalStateException("Cannot decrease number of comments");
+        }
+    }
+
 }
