@@ -1,5 +1,6 @@
 package com.twilight.twilight.domain.bulletin.service;
 
+import com.twilight.twilight.domain.bulletin.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostRecommendation;
@@ -97,7 +98,7 @@ public class FreeBoardPostService {
     }
 
     @Transactional
-    public void editPost(Member member, Long postId, FreeBoardPostForm form) {
+    public void editPost(Member member, Long postId, FreeBoardPostEditForm form) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
         if (!post.getMember().getMemberId().equals(member.getMemberId())) {
@@ -133,16 +134,16 @@ public class FreeBoardPostService {
     }
 
     @Transactional
-    public void increasePostRecommendation(Member member, Long postId) {
+    public RecommendResult increasePostRecommendation(Member member, Long postId) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
 
         if (post.getMember().getMemberId().equals(member.getMemberId())) {
-            throw new AccessDeniedException("자기 자신의 글은 추천하실 수 없습니다.");
+            return RecommendResult.SELF_RECOMMEND;
         }
 
         if (freeBoardPostRecommendationRepository.existsByMemberAndPost(member,post)) {
-            throw new IllegalStateException("이미 추천한 게시글입니다.");
+            return RecommendResult.ALREADY_RECOMMENDED;
         }
 
         
@@ -155,6 +156,8 @@ public class FreeBoardPostService {
                         .member(member)
                         .build()
         );
+
+        return RecommendResult.OK;
     }
 
     @Transactional

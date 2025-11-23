@@ -1,5 +1,6 @@
 package com.twilight.twilight.domain.bulletin.controller;
 
+import com.twilight.twilight.domain.bulletin.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
@@ -9,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -51,10 +53,19 @@ public class FreeBoardViewController {
     @PostMapping("/{post-id}/recommend")
     public String increaseRecommendation(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable("post-id") Long postId
+            @PathVariable("post-id") Long postId,
+            RedirectAttributes ra
     ) {
-        freeBoardPostService.increasePostRecommendation(userDetails.getMember(), postId);
+        RecommendResult result =
+                freeBoardPostService.increasePostRecommendation(userDetails.getMember(), postId);
 
+        if (result == RecommendResult.SELF_RECOMMEND) {
+            ra.addFlashAttribute("recommendError", "SELF_RECOMMEND");
+            ra.addFlashAttribute("errorMessage", "자기 자신의 글은 추천할 수 없습니다.");
+        } else if (result == RecommendResult.ALREADY_RECOMMENDED) {
+            ra.addFlashAttribute("recommendError", "ALREADY_RECOMMENDED");
+            ra.addFlashAttribute("errorMessage", "이미 추천한 게시글입니다.");
+        }
         return "redirect:/bulletin/free-board/{post-id}";
     }
 
@@ -82,7 +93,7 @@ public class FreeBoardViewController {
     ) {
         GetFreeBoardPostEditDto dto =
                 freeBoardPostService.getEditablePost(userDetails.getMember(), postId);
-        model.addAttribute("postDetail", dto);
+        model.addAttribute("post", dto);
         return "bulletin/free-board-edit";
     }
 
@@ -90,7 +101,7 @@ public class FreeBoardViewController {
     public String editFreeBoardPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
-            @ModelAttribute FreeBoardPostForm form
+            @ModelAttribute FreeBoardPostEditForm form
     ) {
         freeBoardPostService.editPost(userDetails.getMember(), postId, form);
         return "redirect:/bulletin/free-board/list";

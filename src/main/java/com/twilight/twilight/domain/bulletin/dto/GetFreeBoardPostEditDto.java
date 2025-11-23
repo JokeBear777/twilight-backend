@@ -13,6 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class GetFreeBoardPostEditDto {
+
+    private Long postId;
+
     private String title;
 
     private String content;
@@ -25,6 +28,7 @@ public class GetFreeBoardPostEditDto {
 
     public static GetFreeBoardPostEditDto fromEntity(FreeBoardPost freeBoardPost) {
         return GetFreeBoardPostEditDto.builder()
+                .postId(freeBoardPost.getFreeBoardPostId())
                 .title(freeBoardPost.getTitle())
                 .content(freeBoardPost.getContent())
                 .name(freeBoardPost.getMember().getMemberName())
