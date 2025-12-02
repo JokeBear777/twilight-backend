@@ -5,12 +5,10 @@ import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostRecommendation;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostReply;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostQueryRepository;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRecommendationRepository;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostReplyRepository;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRepository;
+import com.twilight.twilight.domain.bulletin.repository.*;
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
+import com.twilight.twilight.global.config.BulletinPageProps;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -67,15 +66,65 @@ public class FreeBoardPostService {
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
     }
 
-    public List<GetFreeBoardPostReplyDto> getFreeBoardPostReplies(Long postId) {
+    public List<GetFreeBoardPostReplyDto> getFreeBoardPostParentsReplies(Long postId) {
         List<GetFreeBoardPostReplyDto> dtoList =
                 freeBoardPostQueryRepository
-                        .findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
+                        .findTopNParentRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
 
         Collections.reverse(dtoList); // 역순으로 뒤집기 (내림 → 오름)
 
         log.info("list size = {}", (dtoList != null ? dtoList.size() : null));
         return dtoList;
+    }
+
+    public Map<Long, List<GetFreeBoardPostReplyDto>> getChildrenReplies(List<GetFreeBoardPostReplyDto> parentsDtoList) {
+
+        if (parentsDtoList == null || parentsDtoList.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> parentIds = parentsDtoList.stream()
+                .map(GetFreeBoardPostReplyDto::getFreeBoardPostReplyId)
+                .toList();
+
+        List<GetFreeBoardPostReplyDto> children =
+                freeBoardPostQueryRepository.findChildrenByParentIds(parentIds);
+
+        return children.stream()
+                        .collect(Collectors.groupingBy(GetFreeBoardPostReplyDto::getParentReplyId));
+
+    }
+
+    public void setPreviewChildren(
+            List<GetFreeBoardPostReplyDto> parentDtoList,
+            Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap) {
+
+        int preViewSize = pageProps.getChildrenReplyFreeViewSize();
+
+        for (GetFreeBoardPostReplyDto parentDto : parentDtoList) {
+            List<GetFreeBoardPostReplyDto> allChildren =
+                    childrenMap.getOrDefault(parentDto.getFreeBoardPostReplyId(), List.of());
+
+            List<GetFreeBoardPostReplyDto> preview =
+                    allChildren.stream().limit(preViewSize).toList();
+
+            parentDto.setChildrenList(preview);
+            parentDto.setHasMoreChildren(allChildren.size() > preViewSize);
+        }
+    }
+
+    //getFreeBoardPostParentsReplies 사용하는 컨트롤러들 이 함수 완성되면 이거쓰도록 수정
+    public List<GetFreeBoardPostReplyDto> getParentsWithChildrenPreview(Long postId) {
+        List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId);
+
+        if (parentDtoList == null || parentDtoList.isEmpty()) {
+            return parentDtoList;
+        }
+
+        Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap = getChildrenReplies(parentDtoList);
+        setPreviewChildren(parentDtoList, childrenMap);
+
+        return parentDtoList;
     }
 
     public List<GetFreeBoardPostReplyDto> getFreeBoardPostAllReplies(Long postId) {

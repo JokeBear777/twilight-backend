@@ -42,7 +42,7 @@ public class FreeBoardViewController {
     ) {
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
         model.addAttribute("post", postDetailDto);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostParentsReplies(postId);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
 
@@ -133,7 +133,7 @@ public class FreeBoardViewController {
         freeBoardPostService.postFreeBoardReply(postId, userDetails.getMember(), form);
 
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostParentsReplies(postId);
 
         model.addAttribute("post", postDetailDto);
         model.addAttribute("replies", dtoList);
@@ -153,7 +153,7 @@ public class FreeBoardViewController {
         freeBoardPostService.deleteReply(userDetails.getMember(), replyId, postId);
 
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostParentsReplies(postId);
 
         model.addAttribute("post", postDetailDto);
         model.addAttribute("replies", dtoList);
