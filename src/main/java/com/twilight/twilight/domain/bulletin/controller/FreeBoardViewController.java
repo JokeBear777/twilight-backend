@@ -43,7 +43,7 @@ public class FreeBoardViewController {
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
         model.addAttribute("post", postDetailDto);
 
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getParentsWithChildrenPreview(postId, 1L);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, 1L);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
 
@@ -137,16 +137,30 @@ public class FreeBoardViewController {
     ) {
         freeBoardPostService.postFreeBoardReply(postId, userDetails.getMember(), form);
 
-        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getParentsWithChildrenPreview(postId, 1L);
-        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
+        long currentPage = (form.getCurrentPage() == null || form.getCurrentPage() < 1)
+                ? 1L
+                : form.getCurrentPage();
 
-        model.addAttribute("replyPageInfo", replyPageInfo);
+        GetFreeBoardPostDetailDto postDetailDto =
+                freeBoardPostService.getFreeBoardPostDetail(postId);
+
+        ReplyPageInfo replyPageInfo =
+                freeBoardPostService.getReplyPageInfo(postId, currentPage);
+
+        List<GetFreeBoardPostReplyDto> dtoList;
+        if (currentPage == 1L) {
+            dtoList = freeBoardPostService.getRepliesByPage(postId, currentPage);
+        } else {
+            dtoList = freeBoardPostService.getRepliesByPage(postId, currentPage);
+        }
+
+
         model.addAttribute("post", postDetailDto);
         model.addAttribute("replies", dtoList);
+        model.addAttribute("replyPageInfo", replyPageInfo);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
 
-        //return "bulletin/free-board-post-detail :: replies-wrap";
+
         return "bulletin/free-board-post-detail :: replies";
     }
 
@@ -160,7 +174,7 @@ public class FreeBoardViewController {
         freeBoardPostService.deleteReply(userDetails.getMember(), replyId, postId);
 
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getParentsWithChildrenPreview(postId, 1L);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, 1L);
         ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
 
         model.addAttribute("replyPageInfo", replyPageInfo);
@@ -171,7 +185,7 @@ public class FreeBoardViewController {
         return "bulletin/free-board-post-detail :: replies";
     }
 
-    @GetMapping("/bulletin/free-board/{post-id}/reply")
+    @GetMapping("/{post-id}/reply")
     public String getReplies(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,

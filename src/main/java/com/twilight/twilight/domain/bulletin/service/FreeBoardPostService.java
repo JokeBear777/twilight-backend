@@ -110,7 +110,6 @@ public class FreeBoardPostService {
         }
     }
 
-    //추후에 인덱스 달아서 성능 업그레이드 하자
     public List<GetFreeBoardPostReplyDto> getParentsWithChildrenPreview(Long postId, Long page) {
         List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId, page);
 
@@ -262,6 +261,7 @@ public class FreeBoardPostService {
         return ReplyPageInfo.parentsOnly(countParentReplies, countPageNumber, currentPage);
     }
 
+    //추후에 인덱스 달아서 업그레이드
     public List<GetFreeBoardPostReplyDto> getRepliesByPage(Long postId, Long page) {
         List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId, page);
 

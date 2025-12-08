@@ -66,6 +66,16 @@
             color: #8a7a6a;
             font-size: .85rem;
             padding: 0 .9rem 1rem;
+            white-space: nowrap;
+        }
+
+        .meta-row > span {
+            /* 아이콘 + 텍스트를 한 덩어리로 취급 */
+            display: inline-flex;
+            align-items: center;
+
+            /* 줄어들면서 줄바꿈 나지 않게 */
+            flex-shrink: 0;
         }
 
         .meta-sep {
@@ -329,6 +339,9 @@
                                 <!-- 이 댓글을 부모로 -->
                                 <input type="hidden" name="parentReplyId"
                                        th:value="${c.freeBoardPostReplyId}"/>
+                                <input type="hidden" name="currentPage"
+                                        th:value="${replyPageInfo.getCurrentPage()}"
+                                >
 
                                 <div class="form-group mb-1">
             <textarea name="content" rows="2" class="form-control"
@@ -642,7 +655,6 @@
                 }
             }
 
-            // 3-3) 페이지 버튼
             const pageBtn = e.target.closest('.reply-page-btn');
             if (pageBtn) {
                 e.preventDefault();
@@ -654,16 +666,20 @@
                         method: 'GET',
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
+
                     if (!res.ok) {
-                        alert('댓글 페이지를 불러오는 중 오류가 발생했습니다.');
+                        // 🔥 여기에서 그냥 전체 페이지 이동 → 스프링 에러 페이지 그대로 노출
+                        window.location.href = url;
                         return;
                     }
+
                     const html = await res.text();
                     replaceRepliesFromHtml(html);
                     bindReplyHandlers(); // 새 DOM에 이벤트 다시 바인딩
                 } catch (err) {
                     console.error(err);
-                    alert('네트워크 오류가 발생했습니다.');
+                    // 네트워크 레벨 오류(서버 죽음 등)도 전체 새로고침해서 에러 페이지/브라우저 에러 보게
+                    window.location.href = url;
                 }
             }
         });
