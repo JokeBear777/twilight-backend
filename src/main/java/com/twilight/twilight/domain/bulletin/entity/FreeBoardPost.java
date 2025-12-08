@@ -62,8 +62,19 @@ public class FreeBoardPost {
         this.views++;
     }
 
-    public void increaseNumberOfComments() {
+    public void increaseNumberOfRecommendations() {
         this.numberOfRecommendations++;
+    }
+
+    public void increaseNumberOfComments() {
+        this.numberOfComments++;
+    }
+
+    public void decreaseNumberOfComments() {
+        this.numberOfComments--;
+        if (this.numberOfComments < 0) {
+            throw new IllegalStateException("Cannot decrease number of comments");
+        }
     }
 
 }

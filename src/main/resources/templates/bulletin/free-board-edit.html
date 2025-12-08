@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>글 수정</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        /* 너 작성폼 스타일 그대로 */
+        @font-face {
+            font-family: 'CookieRun-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'CookieRun-Regular', sans-serif;
+            background: #e6dcd0;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card-main-container {
+            width: 375px;
+            height: 650px;
+            background-color: #fffaf6;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: 2px solid #d6ccc2;
+            overflow: visible;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem 0.2rem 1.5rem;
+            background-color: transparent;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #5e4633;
+        }
+
+        .card-body-center {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0;
+            text-align: left;
+        }
+
+        .footer-nav {
+            background-color: #ead4c5;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 1.5rem;
+        }
+
+        .footer-nav .btn-dark {
+            background: transparent;
+            border: none;
+            color: #4e3b31;
+            flex: 1;
+        }
+
+        .footer-nav .btn-dark.active {
+            color: #c45b5b;
+        }
+
+        .footer-nav .btn-dark i {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .footer-nav .btn-dark small {
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card-main-container">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>글 수정</span>
+        </div>
+
+        <!-- 본문 -->
+        <div class="card-body-center p-3">
+            <!-- ✅ 수정용 action URL로 변경 -->
+            <form th:action="@{|/bulletin/free-board/${post.postId}|}"
+                  method="post"
+                  id="editForm"
+                  style="display:flex; flex-direction:column; gap:1rem;">
+
+                <!-- 제목 -->
+                <div>
+                    <label for="title" style="font-weight:600; color:#5e4633; margin-bottom:0.5rem;">제목</label>
+
+                    <!-- ✅ 기존 제목 자동 채움 -->
+                    <input type="text"
+                           id="title"
+                           name="title"
+                           class="form-control"
+                           placeholder="제목을 입력하세요"
+                           required
+                           th:value="${post.getTitle()}"
+                           style="border:1px solid #d6ccc2; border-radius:0.6rem; font-size:0.9rem; padding:0.6rem;">
+                </div>
+
+                <!-- 내용 -->
+                <div>
+                    <label for="content" style="font-weight:600; color:#5e4633; margin-bottom:0.5rem;">내용</label>
+
+                    <!-- ✅ textarea는 th:text로 기존 내용 채움 -->
+                    <textarea id="content"
+                              name="content"
+                              rows="8"
+                              class="form-control"
+                              placeholder="내용을 입력하세요"
+                              required
+                              th:text="${post.getContent()}"
+                              style="border:1px solid #d6ccc2; border-radius:0.6rem; font-size:0.9rem; padding:0.6rem; resize:none;"></textarea>
+                </div>
+
+                <!-- 제출 버튼 -->
+                <button type="submit"
+                        class="btn btn-block"
+                        style="background-color:#8b5e34; color:white; font-weight:600; border-radius:0.6rem; padding:0.7rem 0;">
+                    수정 완료
+                </button>
+
+                <!-- (선택) 취소/뒤로가기 버튼 -->
+                <a th:href="@{|/bulletin/free-board/${post.postId}|}"
+                   class="btn btn-outline-secondary btn-block"
+                   style="border-radius:0.6rem;">
+                    취소
+                </a>
+            </form>
+        </div>
+
+        <!-- footer nav 그대로 -->
+        <nav class="footer-nav d-flex justify-content-around text-white">
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/home'">
+                <i class="fas fa-home"></i><small>홈</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/record'">
+                <i class="fas fa-book"></i><small>내 서재</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center"
+                    onclick="location.href='/book/recommendation'">
+                <i class="fas fa-search"></i><small>책 추천</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center active"
+                    onclick="location.href='/bulletin'">
+                <i class="fas fa-comments"></i><small>게시판</small>
+            </button>
+            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/mypage'">
+                <i class="fas fa-user"></i><small>내 정보</small>
+            </button>
+        </nav>
+    </div>
+</section>
+</body>
+</html>

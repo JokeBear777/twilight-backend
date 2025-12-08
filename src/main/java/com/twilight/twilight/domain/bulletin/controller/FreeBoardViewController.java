@@ -1,5 +1,6 @@
 package com.twilight.twilight.domain.bulletin.controller;
 
+import com.twilight.twilight.domain.bulletin.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
@@ -9,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -22,7 +24,7 @@ public class FreeBoardViewController {
     private final FreeBoardPostService freeBoardPostService;
 
     @GetMapping("/list")
-    private String freeBoardList(
+    public String freeBoardList(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
         List<GetFreeBoardPostListDto> list = freeBoardPostService.getFreeBoardPostsByStaticVariable();
@@ -33,38 +35,54 @@ public class FreeBoardViewController {
     }
 
     @GetMapping("/{post-id}")
-    private String getFreeBoardDetail(
+    public String getFreeBoardDetail(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
             Model model
     ) {
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
         model.addAttribute("post", postDetailDto);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostReplies(postId);
+
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, 1L);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
+        model.addAttribute("replyPageInfo", replyPageInfo);
+        log.info("페이지 정보 = {} ", replyPageInfo.toString());
+
         return "bulletin/free-board-post-detail";
     }
 
-    @PostMapping("/{post-id}/recommend")
-    private String increaseRecommendation(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable("post-id") Long postId
-    ) {
-        freeBoardPostService.increasePostRecommendation(userDetails.getMember(), postId);
 
+    @PostMapping("/{post-id}/recommend")
+    public String increaseRecommendation(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            RedirectAttributes ra
+    ) {
+        RecommendResult result =
+                freeBoardPostService.increasePostRecommendation(userDetails.getMember(), postId);
+
+        if (result == RecommendResult.SELF_RECOMMEND) {
+            ra.addFlashAttribute("recommendError", "SELF_RECOMMEND");
+            ra.addFlashAttribute("errorMessage", "자기 자신의 글은 추천할 수 없습니다.");
+        } else if (result == RecommendResult.ALREADY_RECOMMENDED) {
+            ra.addFlashAttribute("recommendError", "ALREADY_RECOMMENDED");
+            ra.addFlashAttribute("errorMessage", "이미 추천한 게시글입니다.");
+        }
         return "redirect:/bulletin/free-board/{post-id}";
     }
 
     @GetMapping("/write")
-    private String writeFreeBoardForm(
+    public String writeFreeBoardForm(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return "bulletin/bulletin-free-board-write";
     }
 
     @PostMapping("/write")
-    private String writeFreeBoard(
+    public String writeFreeBoard(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @ModelAttribute FreeBoardPostForm form
             ) {
@@ -73,29 +91,29 @@ public class FreeBoardViewController {
     }
 
     @GetMapping("/{post-id}/edit")
-    private String editFreeBoardPostForm(
+    public String editFreeBoardPostForm(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
             Model model
     ) {
         GetFreeBoardPostEditDto dto =
                 freeBoardPostService.getEditablePost(userDetails.getMember(), postId);
-        model.addAttribute("postDetail", dto);
+        model.addAttribute("post", dto);
         return "bulletin/free-board-edit";
     }
 
     @PostMapping("/{post-id}")
-    private String editFreeBoardPost(
+    public String editFreeBoardPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId,
-            @ModelAttribute FreeBoardPostForm form
+            @ModelAttribute FreeBoardPostEditForm form
     ) {
         freeBoardPostService.editPost(userDetails.getMember(), postId, form);
         return "redirect:/bulletin/free-board/list";
     }
 
-    @DeleteMapping("/{post-id}")
-    private String deleteFreeBoardPost(
+    @PostMapping("/{post-id}/delete")
+    public String deleteFreeBoardPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("post-id") Long postId
     ) {
@@ -104,5 +122,88 @@ public class FreeBoardViewController {
         return "redirect:/bulletin/free-board/list";
     }
 
+    /*
+    *
+    * ************ 리플 부분 *************
+    *
+    *  */
 
+    @PostMapping("/{post-id}/reply")
+    public String addComment(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            Model model,
+            @ModelAttribute FreeBoardPostReplyForm form
+    ) {
+        freeBoardPostService.postFreeBoardReply(postId, userDetails.getMember(), form);
+
+        long currentPage = (form.getCurrentPage() == null || form.getCurrentPage() < 1)
+                ? 1L
+                : form.getCurrentPage();
+
+        GetFreeBoardPostDetailDto postDetailDto =
+                freeBoardPostService.getFreeBoardPostDetail(postId);
+
+        ReplyPageInfo replyPageInfo =
+                freeBoardPostService.getReplyPageInfo(postId, currentPage);
+
+        List<GetFreeBoardPostReplyDto> dtoList;
+        if (currentPage == 1L) {
+            dtoList = freeBoardPostService.getRepliesByPage(postId, currentPage);
+        } else {
+            dtoList = freeBoardPostService.getRepliesByPage(postId, currentPage);
+        }
+
+
+        model.addAttribute("post", postDetailDto);
+        model.addAttribute("replies", dtoList);
+        model.addAttribute("replyPageInfo", replyPageInfo);
+        model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+
+        return "bulletin/free-board-post-detail :: replies";
+    }
+
+    @PostMapping("/{post-id}/reply/{reply-id}/delete")
+    public String deleteReply(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            @PathVariable("reply-id") Long replyId,
+            Model model
+    ) {
+        freeBoardPostService.deleteReply(userDetails.getMember(), replyId, postId);
+
+        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, 1L);
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
+
+        model.addAttribute("replyPageInfo", replyPageInfo);
+        model.addAttribute("post", postDetailDto);
+        model.addAttribute("replies", dtoList);
+        model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+        return "bulletin/free-board-post-detail :: replies";
+    }
+
+    @GetMapping("/{post-id}/reply")
+    public String getReplies(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            @RequestParam(name = "page", defaultValue = "1") Long page,
+            @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+            Model model
+    ) {
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, page);
+        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, page);
+
+        //log.info("[TEST] get pageNumber = {}", page);
+
+        model.addAttribute("replyPageInfo", replyPageInfo);
+        model.addAttribute("post", postDetailDto);
+        model.addAttribute("replies", dtoList);
+        model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+        return "bulletin/free-board-post-detail :: replies";
+    }
 }

@@ -66,6 +66,16 @@
             color: #8a7a6a;
             font-size: .85rem;
             padding: 0 .9rem 1rem;
+            white-space: nowrap;
+        }
+
+        .meta-row > span {
+            /* 아이콘 + 텍스트를 한 덩어리로 취급 */
+            display: inline-flex;
+            align-items: center;
+
+            /* 줄어들면서 줄바꿈 나지 않게 */
+            flex-shrink: 0;
         }
 
         .meta-sep {
@@ -137,7 +147,7 @@
         }
 
         /* 댓글 */
-        .comments-wrap {
+        .replies-wrap {
             padding: .75rem .75rem 1rem;
         }
 
@@ -154,6 +164,46 @@
             color: #8a7a6a;
             font-size: .8rem;
         }
+
+        .custom-modal {
+            max-width: 300px;
+        }
+
+        /* 대댓글 영역 */
+        .child-replies {
+            margin-top: .35rem;
+            margin-left: 1.2rem;          /* 들여쓰기 */
+            padding-left: .8rem;
+            border-left: 2px solid #e2d5c8;
+        }
+
+        .child-comment-item {
+            background: #f7efe8;          /* 살짝 다른 배경 */
+            padding: .5rem .6rem;
+            border-radius: .6rem;
+            margin-bottom: .4rem;
+            border: 1px solid #eadfd6;
+            font-size: .9rem;
+        }
+
+        /* 대댓글 폼도 살짝 구분 */
+        .child-comment-form {
+            margin-left: 1.2rem;
+            margin-top: .4rem;
+            padding: .6rem;
+            background: #fbf4ee;
+            border-radius: .6rem;
+            border: 1px dashed #e2d5c8;
+        }
+
+        /* "답글" 버튼 */
+        .reply-toggle-btn {
+            font-size: .8rem;
+            color: #8a7a6a;
+            padding: 0;
+        }
+
+
     </style>
 </head>
 
@@ -176,14 +226,15 @@
                     </button>
                 </form>
 
-                <a th:if="${post.memberId == memberId}" th:href="@{|/bulletin/free-board/edit/${post.freeBoardPostId}|}"
+                <a th:if="${post.memberId == memberId}" th:href="@{|/bulletin/free-board/${post.freeBoardPostId}/edit|}"
                    class="btn btn-outline-secondary" style="border-radius:.6rem;">
                     <i class="fa-regular fa-pen-to-square"></i> 수정
                 </a>
 
                 <form th:if="${post.memberId == memberId}"
-                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/delete|}" method="post" class="ml-auto"
-                      onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/delete|}"
+                      method="post"
+                      class="ml-auto post-delete-form">
                     <button type="submit" class="btn btn-outline-danger" style="border-radius:.6rem;">
                         <i class="fa-regular fa-trash-can"></i> 삭제
                     </button>
@@ -214,32 +265,167 @@
             </div>
 
             <!-- 댓글 영역 (옵션) -->
-            <div class="comments-wrap">
-                <h2 style="font-size:1rem;color:#5e4633;margin-bottom:.5rem;">댓글 <span
-                        th:text="${post.numberOfComments}">0</span></h2>
+            <div class="replies-wrap"
+                 th:fragment="replies"
+                 id="replies-wrap">
+                <h2 style="font-size:1rem;color:#5e4633;margin-bottom:.5rem;">
+                    댓글 <span th:text="${post.numberOfComments}">0</span>
+                </h2>
+
                 <div th:if="${replies != null}">
-                    <div th:if="${#lists.isEmpty(comments)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
+                    <div th:if="${#lists.isEmpty(replies)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
                     <div th:each="c : ${replies}" class="comment-item">
                         <div class="d-flex align-items-center justify-content-between">
-                            <strong th:text="${c.replyWriterName}">사용자</strong>
-                            <span class="comment-meta" th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                            <div>
+                                <strong th:text="${c.replyWriterName}">사용자</strong>
+                                <span class="comment-meta"
+                                      th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                                <!-- 답글 버튼 (왼쪽) -->
+                                <button type="button" class="btn btn-link reply-toggle-btn p-0 mr-2"
+                                        style="font-size:.8rem;">
+                                    답글
+                                </button>
+
+                                <!-- 삭제 버튼: 본인 댓글일 때만 (오른쪽 X) -->
+                                <form th:if="${c.memberId == memberId}"
+                                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/delete|}"
+                                      method="post" class="d-inline reply-delete-form">
+                                    <button type="submit" class="btn btn-sm btn-link text-muted p-0">
+                                        ✕
+                                    </button>
+                                </form>
+                            </div>
                         </div>
+
                         <div th:text="${c.content}">댓글 내용</div>
+
+                        <!-- 자식(대댓글) 프리뷰 영역 -->
+                        <div class="child-replies"
+                             th:if="${c.childrenList != null and !#lists.isEmpty(c.childrenList)}">
+
+                            <div th:each="child : ${c.childrenList}" class="child-comment-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <strong th:text="${child.replyWriterName}">대댓글 작성자</strong>
+                                        <span class="comment-meta"
+                                              th:text="${#temporals.format(child.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                                    </div>
+
+                                    <!-- 대댓글 삭제 버튼: 본인 댓글일 때만 -->
+                                    <form th:if="${child.memberId == memberId}"
+                                          th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${child.freeBoardPostReplyId}/delete|}"
+                                          method="post"
+                                          class="d-inline reply-delete-form">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-link text-muted p-0">
+                                            ✕
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div th:text="${child.content}">대댓글 내용</div>
+                            </div>
+
+                        </div>
+
+                        <!-- 대댓글 작성 폼 (처음에는 숨김) -->
+                        <div class="child-comment-form d-none">
+                            <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply|}"
+                                  method="post"
+                                  class="comment-form">
+                                <!-- 이 댓글을 부모로 -->
+                                <input type="hidden" name="parentReplyId"
+                                       th:value="${c.freeBoardPostReplyId}"/>
+                                <input type="hidden" name="currentPage"
+                                        th:value="${replyPageInfo.getCurrentPage()}"
+                                >
+
+                                <div class="form-group mb-1">
+            <textarea name="content" rows="2" class="form-control"
+                      placeholder="답글을 입력하세요"
+                      style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.85rem;resize:none;"
+                      required></textarea>
+                                </div>
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-sm"
+                                            style="background-color:#8b5e34;color:#fff;border-radius:.6rem;">
+                                        등록
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- 자식 더보기 버튼 (hasMoreChildren == true일 때만 노출) -->
+                        <div th:if="${c.hasMoreChildren}" class="mt-1 child-more-wrap">
+                            <button type="button"
+                                    class="btn btn-link reply-toggle-btn child-more-btn p-0"
+                                    style="font-size:.8rem;"
+                                    th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/children|}">
+                                답글 더보기
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div th:if="${comments == null}" class="text-center text-muted p-2">댓글 데이터를 불러오지 않았습니다.</div>
+                <div th:if="${replies == null}" class="text-center text-muted p-2">댓글 데이터를 불러오지 않았습니다.</div>
 
-                <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/comments|}" method="post" class="mt-2">
+                <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply|}"
+                      method="post"
+                      class="mt-2 comment-form"
+                      id="comment-form">
                     <div class="form-group mb-2">
-              <textarea name="content" rows="3" class="form-control" placeholder="댓글을 입력하세요"
-                        style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;" required></textarea>
+            <textarea name="content" rows="3" class="form-control" placeholder="댓글을 입력하세요"
+                      style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;"
+                      required></textarea>
                     </div>
                     <button type="submit" class="btn btn-block"
                             style="background-color:#8b5e34;color:#fff;font-weight:600;border-radius:.6rem;">
                         댓글 등록
                     </button>
                 </form>
+
+                <div class="reply-pagination mt-2"
+                     th:if="${replyPageInfo != null and replyPageInfo.countParents != null
+              and replyPageInfo.countParents > replyPageInfo.pageSize}">
+
+                    <ul class="pagination justify-content-center mb-0" style="font-size:.8rem;">
+                        <!-- 이전 페이지 -->
+                        <li class="page-item"
+                            th:classappend="${replyPageInfo.currentPage == 1} ? 'disabled'">
+                            <a class="page-link reply-page-btn"
+                               href="#"
+                               th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply?page=${replyPageInfo.currentPage - 1}|}">
+                                &laquo;
+                            </a>
+                        </li>
+
+                        <!-- 페이지 번호들 -->
+                        <li class="page-item"
+                            th:each="pageNum : ${#numbers.sequence(1, replyPageInfo.pageSize)}"
+                            th:classappend="${pageNum == replyPageInfo.currentPage} ? ' active'">
+                            <a class="page-link reply-page-btn"
+                               href="#"
+                               th:text="${pageNum}"
+                               th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply?page=${pageNum}|}">
+                            </a>
+                        </li>
+
+                        <!-- 다음 페이지 -->
+                        <li class="page-item"
+                            th:classappend="${replyPageInfo.currentPage == replyPageInfo.pageSize} ? 'disabled'">
+                            <a class="page-link reply-page-btn"
+                               href="#"
+                               th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply?page=${replyPageInfo.currentPage + 1}|}">
+                                &raquo;
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
+
+
         </div>
         <!-- ✅ 스크롤 되는 본문 영역 끝 -->
 
@@ -264,7 +450,320 @@
         </nav>
 
     </div>
+
+    <!-- 댓글 삭제 확인 모달 (Bootstrap 4) -->
+    <div class="modal fade" id="replyDeleteModal" tabindex="-1" role="dialog" aria-labelledby="replyDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered custom-modal" role="document">
+            <div class="modal-content" style="border-radius:1rem;">
+                <div class="modal-header" style="border-bottom: none;">
+                    <h5 class="modal-title" id="replyDeleteModalLabel" style="color:#5e4633;font-weight:700;">
+                        댓글 삭제
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" style="color:#3e2f20;">
+                    정말 이 댓글을 삭제하시겠습니까?
+                </div>
+
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal" style="border-radius:.6rem;">
+                        취소
+                    </button>
+                    <button type="button" class="btn btn-danger" id="replyDeleteConfirmBtn" style="border-radius:.6rem;">
+                        삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 게시글 삭제 확인 모달 -->
+    <div class="modal fade" id="postDeleteModal" tabindex="-1" role="dialog"
+         aria-labelledby="postDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered custom-modal" role="document">
+            <div class="modal-content" style="border-radius:1rem;">
+                <div class="modal-header" style="border-bottom: none;">
+                    <h5 class="modal-title" id="postDeleteModalLabel"
+                        style="color:#5e4633;font-weight:700;">
+                        게시글 삭제
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" style="color:#3e2f20;">
+                    정말 이 게시글을 삭제하시겠습니까?
+                </div>
+
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-dismiss="modal" style="border-radius:.6rem;">
+                        취소
+                    </button>
+                    <button type="button" class="btn btn-danger"
+                            id="postDeleteConfirmBtn" style="border-radius:.6rem;">
+                        삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 추천 알림 모달 (확인만) -->
+    <div class="modal fade" id="recommendAlertModal" tabindex="-1" role="dialog"
+         aria-labelledby="recommendAlertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered custom-modal" role="document">
+            <div class="modal-content" style="border-radius:1rem;">
+                <div class="modal-header" style="border-bottom:none;">
+                    <h5 class="modal-title" id="recommendAlertModalLabel"
+                        style="color:#5e4633;font-weight:700;">
+                        알림
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" id="recommendAlertMessage" style="color:#3e2f20;">
+                    <!-- JS가 메시지 넣어줌 -->
+                </div>
+
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn btn-danger"
+                            data-dismiss="modal" style="border-radius:.6rem;">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </section>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.min.js"></script>
+<script th:inline="javascript">
+    function replaceRepliesFromHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newRepliesWrap = doc.querySelector('.replies-wrap');
+        if (!newRepliesWrap) return false;
+
+        const current = document.getElementById('replies-wrap');
+        current.replaceWith(newRepliesWrap);
+        return true;
+    }
+
+    let pendingDeleteForm = null; // 삭제 대상 form 저장
+
+    function bindReplyHandlers() {
+        const repliesWrap = document.getElementById('replies-wrap');
+        if (!repliesWrap) return;
+
+        // ✅ 1) 댓글/대댓글 작성 AJAX
+        repliesWrap.addEventListener('submit', async (e) => {
+            const form = e.target;
+            if (!form.classList.contains('comment-form')) {
+                return; // 우리 댓글 폼이 아니면 무시
+            }
+
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            const res = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            if (!res.ok) {
+                alert('댓글 등록 중 오류');
+                return;
+            }
+
+            const html = await res.text();
+            replaceRepliesFromHtml(html);
+            bindReplyHandlers();
+        });
+
+        // ✅ 2) 댓글 삭제 모달
+        repliesWrap.addEventListener('submit', (e) => {
+            const target = e.target;
+            if (!target.classList.contains('reply-delete-form')) return;
+
+            e.preventDefault();
+            pendingDeleteForm = target;
+            $('#replyDeleteModal').modal('show');
+        });
+
+        // ✅ 3) 클릭 이벤트(답글 더보기 + 답글 폼 토글 동시에 처리)
+        repliesWrap.addEventListener('click', async (e) => {
+            // 3-1) 답글 더보기 버튼
+            const moreBtn = e.target.closest('.child-more-btn');
+            if (moreBtn) {
+                e.preventDefault();
+                const url = moreBtn.dataset.url;
+                if (!url) return;
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!res.ok) {
+                        alert('답글 더보기 요청 중 오류가 발생했습니다.');
+                        return;
+                    }
+
+                    const html = await res.text();
+                    replaceRepliesFromHtml(html);
+                    bindReplyHandlers();
+                } catch (err) {
+                    console.error(err);
+                    alert('네트워크 오류가 발생했습니다.');
+                }
+
+                return; // 더보기 처리 끝
+            }
+
+            // 3-2) "답글" 버튼 → 대댓글 폼 열기/닫기
+            const replyBtn = e.target.closest('.reply-toggle-btn');
+            if (replyBtn) {
+                e.preventDefault();
+
+                // 이 버튼이 포함된 댓글 블록 찾기
+                const commentItem = replyBtn.closest('.comment-item');
+                if (!commentItem) return;
+
+                // 해당 댓글 아래의 대댓글 폼
+                const childFormWrap = commentItem.querySelector('.child-comment-form');
+                if (!childFormWrap) return;
+
+                // d-none 토글 (보이기/숨기기)
+                childFormWrap.classList.toggle('d-none');
+
+                // 열릴 때 textarea에 포커스
+                if (!childFormWrap.classList.contains('d-none')) {
+                    const textarea = childFormWrap.querySelector('textarea');
+                    if (textarea) textarea.focus();
+                }
+            }
+
+            const pageBtn = e.target.closest('.reply-page-btn');
+            if (pageBtn) {
+                e.preventDefault();
+                const url = pageBtn.dataset.url;
+                if (!url) return;
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!res.ok) {
+                        // 🔥 여기에서 그냥 전체 페이지 이동 → 스프링 에러 페이지 그대로 노출
+                        window.location.href = url;
+                        return;
+                    }
+
+                    const html = await res.text();
+                    replaceRepliesFromHtml(html);
+                    bindReplyHandlers(); // 새 DOM에 이벤트 다시 바인딩
+                } catch (err) {
+                    console.error(err);
+                    // 네트워크 레벨 오류(서버 죽음 등)도 전체 새로고침해서 에러 페이지/브라우저 에러 보게
+                    window.location.href = url;
+                }
+            }
+        });
+    }
+
+    // 모달 "삭제" 버튼 눌렀을 때 실제 삭제 실행
+    document.addEventListener('DOMContentLoaded', () => {
+        bindReplyHandlers();
+
+        const confirmBtn = document.getElementById('replyDeleteConfirmBtn');
+        confirmBtn.addEventListener('click', async () => {
+            if (!pendingDeleteForm) return;
+
+            try {
+                const formData = new FormData(pendingDeleteForm);
+
+                const res = await fetch(pendingDeleteForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!res.ok) {
+                    alert('댓글 삭제 중 오류');
+                    return;
+                }
+
+                const html = await res.text();
+                replaceRepliesFromHtml(html);
+                bindReplyHandlers(); // 새 DOM에 다시 바인딩
+
+                $('#replyDeleteModal').modal('hide'); // 모달 닫기
+                pendingDeleteForm = null;
+            } catch (err) {
+                console.error(err);
+                alert('네트워크 오류가 발생했습니다.');
+            }
+        });
+    });
+
+    let pendingPostDeleteForm = null;
+
+    // 게시글 삭제 submit 가로채서 모달 띄우기
+    document.addEventListener('DOMContentLoaded', () => {
+        // 게시글 삭제 form 찾기
+        const postDeleteForm = document.querySelector('.post-delete-form');
+        if (postDeleteForm) {
+            postDeleteForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                pendingPostDeleteForm = postDeleteForm;
+                $('#postDeleteModal').modal('show');
+            });
+        }
+
+        // 모달에서 "삭제" 눌렀을 때 실제 form 제출
+        const postConfirmBtn = document.getElementById('postDeleteConfirmBtn');
+        postConfirmBtn.addEventListener('click', () => {
+            if (!pendingPostDeleteForm) return;
+
+            $('#postDeleteModal').modal('hide');
+            pendingPostDeleteForm.submit(); // 일반 submit으로 삭제 (리다이렉트 정상)
+            pendingPostDeleteForm = null;
+        });
+    });
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // flash로 넘어온 값 읽기 (없으면 null)
+        const recommendError = /*[[${recommendError}]]*/ null;
+        const errorMessage = /*[[${errorMessage}]]*/ null;
+
+        const recommendSuccess = /*[[${recommendSuccess}]]*/ null;
+        const successMessage = /*[[${successMessage}]]*/ null;
+
+        // 에러가 있으면 에러 메시지로 모달 오픈
+        if (recommendError != null) {
+            document.getElementById("recommendAlertMessage").innerText =
+                errorMessage ?? "추천 처리 중 오류가 발생했습니다.";
+            $('#recommendAlertModal').modal('show');
+        }
+
+    });
+</script>
 </body>
 
 </html>
+

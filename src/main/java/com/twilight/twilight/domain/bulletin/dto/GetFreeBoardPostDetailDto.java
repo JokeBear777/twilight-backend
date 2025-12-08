@@ -35,6 +35,7 @@ public class GetFreeBoardPostDetailDto {
     public static GetFreeBoardPostDetailDto fromEntity(FreeBoardPost post) {
         return GetFreeBoardPostDetailDto.builder()
                 .freeBoardPostId(post.getFreeBoardPostId())
+                .memberId(post.getMember().getMemberId())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .name(post.getMember().getMemberName())

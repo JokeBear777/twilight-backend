@@ -9,8 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class FreeBoardPostForm {
+public class FreeBoardPostEditForm {
     private String title;
     private String content;
-    private Long parentReplyId;
 }

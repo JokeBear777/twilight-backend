@@ -1,28 +1,34 @@
 package com.twilight.twilight.domain.bulletin.service;
 
+import com.twilight.twilight.domain.bulletin.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostRecommendation;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostQueryRepository;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRecommendationRepository;
-import com.twilight.twilight.domain.bulletin.repository.FreeBoardPostRepository;
+import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostReply;
+import com.twilight.twilight.domain.bulletin.repository.*;
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
+import com.twilight.twilight.global.config.BulletinPageProps;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class FreeBoardPostService {
 
     private final FreeBoardPostRepository freeBoardPostRepository;
@@ -30,6 +36,7 @@ public class FreeBoardPostService {
     private final StringRedisTemplate redisTemplate;
     private final FreeBoardPageProps pageProps;
     private final FreeBoardPostRecommendationRepository freeBoardPostRecommendationRepository;
+    private final FreeBoardPostReplyRepository freeBoardPostReplyRepository;
 
     private static final String TOTAL_COUNT_KEY = "freeBoard:totalCount";
 
@@ -59,8 +66,69 @@ public class FreeBoardPostService {
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
     }
 
-    public List<GetFreeBoardPostReplyDto> getFreeBoardPostReplies(Long postId) {
-        return freeBoardPostQueryRepository.findTopNRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
+    public List<GetFreeBoardPostReplyDto> getFreeBoardPostParentsReplies(Long postId, Long page) {
+        List<GetFreeBoardPostReplyDto> dtoList =
+                freeBoardPostQueryRepository
+                        .findParentRepliesOrderByCreatedAtAsc(postId, page, pageProps.getPostSize());
+        log.info("list size = {}", (dtoList != null ? dtoList.size() : null));
+        return dtoList;
+    }
+
+    public Map<Long, List<GetFreeBoardPostReplyDto>> getChildrenReplies(List<GetFreeBoardPostReplyDto> parentsDtoList) {
+
+        if (parentsDtoList == null || parentsDtoList.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> parentIds = parentsDtoList.stream()
+                .map(GetFreeBoardPostReplyDto::getFreeBoardPostReplyId)
+                .toList();
+
+        List<GetFreeBoardPostReplyDto> children =
+                freeBoardPostQueryRepository.findChildrenByParentIds(parentIds);
+
+        return children.stream()
+                        .collect(Collectors.groupingBy(GetFreeBoardPostReplyDto::getParentReplyId));
+
+    }
+
+    public void setPreviewChildren(
+            List<GetFreeBoardPostReplyDto> parentDtoList,
+            Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap) {
+
+        int preViewSize = pageProps.getReplyFreeViewSize();
+
+        for (GetFreeBoardPostReplyDto parentDto : parentDtoList) {
+            List<GetFreeBoardPostReplyDto> allChildren =
+                    childrenMap.getOrDefault(parentDto.getFreeBoardPostReplyId(), List.of());
+
+            List<GetFreeBoardPostReplyDto> preview =
+                    allChildren.stream().limit(preViewSize).toList();
+
+            parentDto.setChildrenList(preview);
+            parentDto.setHasMoreChildren(allChildren.size() > preViewSize);
+        }
+    }
+
+    public List<GetFreeBoardPostReplyDto> getParentsWithChildrenPreview(Long postId, Long page) {
+        List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId, page);
+
+        if (parentDtoList == null || parentDtoList.isEmpty()) {
+            return parentDtoList;
+        }
+
+        Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap = getChildrenReplies(parentDtoList);
+        setPreviewChildren(parentDtoList, childrenMap);
+
+        return parentDtoList;
+    }
+
+    public List<GetFreeBoardPostReplyDto> getFreeBoardPostAllReplies(Long postId) {
+        return freeBoardPostReplyRepository.findByFreeBoardPost_FreeBoardPostId(postId).stream()
+                .map(reply -> {
+                    return GetFreeBoardPostReplyDto.fromEntity(reply);
+                })
+                .toList();
     }
 
     @Transactional
@@ -75,7 +143,7 @@ public class FreeBoardPostService {
     }
 
     @Transactional
-    public void editPost(Member member, Long postId, FreeBoardPostForm form) {
+    public void editPost(Member member, Long postId, FreeBoardPostEditForm form) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
         if (!post.getMember().getMemberId().equals(member.getMemberId())) {
@@ -105,24 +173,26 @@ public class FreeBoardPostService {
             throw new AccessDeniedException("본인 또는 관리자만 삭제 할 수 있습니다.");
         }
 
+        freeBoardPostReplyRepository.deleteByFreeBoardPost_FreeBoardPostId(postId);
+
         freeBoardPostRepository.delete(post);
     }
 
     @Transactional
-    public void increasePostRecommendation(Member member, Long postId) {
+    public RecommendResult increasePostRecommendation(Member member, Long postId) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
 
         if (post.getMember().getMemberId().equals(member.getMemberId())) {
-            throw new AccessDeniedException("자기 자신의 글은 추천하실 수 없습니다.");
+            return RecommendResult.SELF_RECOMMEND;
         }
 
         if (freeBoardPostRecommendationRepository.existsByMemberAndPost(member,post)) {
-            throw new IllegalStateException("이미 추천한 게시글입니다.");
+            return RecommendResult.ALREADY_RECOMMENDED;
         }
 
         
-        post.increaseNumberOfComments();
+        post.increaseNumberOfRecommendations();
         freeBoardPostRepository.save(post);
 
         freeBoardPostRecommendationRepository.save(
@@ -131,6 +201,79 @@ public class FreeBoardPostService {
                         .member(member)
                         .build()
         );
+
+        return RecommendResult.OK;
+    }
+
+    @Transactional
+    public void postFreeBoardReply(Long postId, Member member, FreeBoardPostReplyForm form) {
+        FreeBoardPost post = freeBoardPostRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
+        post.increaseNumberOfComments();
+
+        FreeBoardPostReply parent = null;
+        if (form.getParentReplyId() != null) {
+            parent = freeBoardPostReplyRepository.findById(form.getParentReplyId())
+                    .orElseThrow(() -> new EntityNotFoundException("부모 댓글을 찾을 수 없습니다. id=" + form.getParentReplyId()));
+        }
+
+        freeBoardPostReplyRepository.save(
+                FreeBoardPostReply.builder()
+                        .member(member)
+                        .freeBoardPost(post)
+                        .parentReply(parent)
+                        .content(form.getContent())
+                        .build()
+        );
+    }
+
+    @Transactional
+    public void deleteReply(Member member, Long replyId, Long postId) {
+
+        FreeBoardPost post = freeBoardPostRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시물을 찾을 수 없습니다. id=" + postId));
+
+        FreeBoardPostReply reply = freeBoardPostReplyRepository.findById(replyId)
+                .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다. id=" + replyId));
+
+        if (!reply.getMember().getMemberId().equals(member.getMemberId())) {
+            throw new AccessDeniedException("본인 또는 관리자만 삭제 할 수 있습니다.");
+        }
+
+        post.decreaseNumberOfComments();
+
+        freeBoardPostReplyRepository.delete(reply);
+    }
+
+    //후에 인덱스 무조건 걸어야함, 풀스캔해야됨
+    private Long countParentReplies (Long postId) {
+        return freeBoardPostQueryRepository.countParentRepliesByPostId(postId);
+    }
+
+    private Long countPageNumber(long countParentReplies) {
+        long size = pageProps.getReplySize();
+        return (countParentReplies + size - 1) / size;
+    }
+
+    public ReplyPageInfo getReplyPageInfo(Long postId, Long currentPage) {
+        Long countParentReplies = countParentReplies(postId);
+        Long countPageNumber = countPageNumber(countParentReplies);
+        return ReplyPageInfo.parentsOnly(countParentReplies, countPageNumber, currentPage);
+    }
+
+    //추후에 인덱스 달아서 업그레이드
+    public List<GetFreeBoardPostReplyDto> getRepliesByPage(Long postId, Long page) {
+        List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId, page);
+
+        if (parentDtoList == null || parentDtoList.isEmpty()) {
+            return parentDtoList;
+        }
+
+        Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap = getChildrenReplies(parentDtoList);
+        setPreviewChildren(parentDtoList, childrenMap);
+
+        return parentDtoList;
+
     }
 
 
