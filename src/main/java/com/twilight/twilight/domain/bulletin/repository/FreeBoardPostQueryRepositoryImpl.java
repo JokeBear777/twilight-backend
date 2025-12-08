@@ -71,6 +71,39 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
     }
 
     @Override
+    public List<GetFreeBoardPostReplyDto> findParentRepliesOrderByCreatedAtAsc(
+            Long postId,
+            Long page,
+            int size
+    ) {
+        long offset = (long) (page - 1) * size;
+
+        return query
+                .select(Projections.constructor(GetFreeBoardPostReplyDto.class,
+                        qFreeBoardPostReply.freeBoardPostReplyId,
+                        parent.freeBoardPostReplyId,
+                        qMember.memberName,
+                        qMember.memberId,
+                        qFreeBoardPostReply.content,
+                        qFreeBoardPostReply.createdAt,
+                        qFreeBoardPostReply.updatedAt
+                ))
+                .from(qFreeBoardPostReply)
+                .where(
+                        qFreeBoardPostReply.freeBoardPost.freeBoardPostId.eq(postId),
+                        qFreeBoardPostReply.parentReply.isNull()
+                )
+                .join(qFreeBoardPostReply.member, member)
+                .leftJoin(qFreeBoardPostReply.parentReply, parent)
+                .orderBy(qFreeBoardPostReply.createdAt.asc())
+                .offset(offset)
+                .limit(size)
+                .fetch();
+
+
+    }
+
+    @Override
     public List<GetFreeBoardPostReplyDto> findLatestChildReplyByReplyId(Long replyId, int count) {
         return query
                 .select(Projections.constructor(GetFreeBoardPostReplyDto.class,
@@ -144,6 +177,24 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                         qFreeBoardPostReply.freeBoardPostReplyId.desc()
                 )
                 .fetch();
+    }
+
+    @Override
+    public long countParentRepliesByPostId(Long postId) {
+        if (postId == null) {
+            return 0L;
+        }
+
+        Long count = query
+                .select(qFreeBoardPostReply.count())
+                .from(qFreeBoardPostReply)
+                .where(
+                        qFreeBoardPostReply.freeBoardPost.freeBoardPostId.eq(postId),
+                        qFreeBoardPostReply.parentReply.isNull()
+                )
+                .fetchOne();
+
+        return (count != null) ? count : 0L;
     }
 
 }

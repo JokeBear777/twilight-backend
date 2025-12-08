@@ -42,9 +42,14 @@ public class FreeBoardViewController {
     ) {
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
         model.addAttribute("post", postDetailDto);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostParentsReplies(postId);
+
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getParentsWithChildrenPreview(postId, 1L);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
+        model.addAttribute("replyPageInfo", replyPageInfo);
+        log.info("페이지 정보 = {} ", replyPageInfo.toString());
 
         return "bulletin/free-board-post-detail";
     }
@@ -133,8 +138,10 @@ public class FreeBoardViewController {
         freeBoardPostService.postFreeBoardReply(postId, userDetails.getMember(), form);
 
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostParentsReplies(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getParentsWithChildrenPreview(postId, 1L);
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
 
+        model.addAttribute("replyPageInfo", replyPageInfo);
         model.addAttribute("post", postDetailDto);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
@@ -153,13 +160,36 @@ public class FreeBoardViewController {
         freeBoardPostService.deleteReply(userDetails.getMember(), replyId, postId);
 
         GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
-        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getFreeBoardPostParentsReplies(postId);
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getParentsWithChildrenPreview(postId, 1L);
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, 1L);
 
+        model.addAttribute("replyPageInfo", replyPageInfo);
         model.addAttribute("post", postDetailDto);
         model.addAttribute("replies", dtoList);
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
 
         return "bulletin/free-board-post-detail :: replies";
     }
-    //삭제후 뷰 문제 해결해야함
+
+    @GetMapping("/bulletin/free-board/{post-id}/reply")
+    public String getReplies(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("post-id") Long postId,
+            @RequestParam(name = "page", defaultValue = "1") Long page,
+            @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+            Model model
+    ) {
+        List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, page);
+        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
+        ReplyPageInfo replyPageInfo = freeBoardPostService.getReplyPageInfo(postId, page);
+
+        //log.info("[TEST] get pageNumber = {}", page);
+
+        model.addAttribute("replyPageInfo", replyPageInfo);
+        model.addAttribute("post", postDetailDto);
+        model.addAttribute("replies", dtoList);
+        model.addAttribute("memberId", userDetails.getMember().getMemberId());
+
+        return "bulletin/free-board-post-detail :: replies";
+    }
 }

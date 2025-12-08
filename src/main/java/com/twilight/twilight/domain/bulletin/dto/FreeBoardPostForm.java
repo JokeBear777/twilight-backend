@@ -12,4 +12,5 @@ import lombok.Setter;
 public class FreeBoardPostForm {
     private String title;
     private String content;
+    private Long parentReplyId;
 }

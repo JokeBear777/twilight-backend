@@ -66,13 +66,10 @@ public class FreeBoardPostService {
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
     }
 
-    public List<GetFreeBoardPostReplyDto> getFreeBoardPostParentsReplies(Long postId) {
+    public List<GetFreeBoardPostReplyDto> getFreeBoardPostParentsReplies(Long postId, Long page) {
         List<GetFreeBoardPostReplyDto> dtoList =
                 freeBoardPostQueryRepository
-                        .findTopNParentRepliesOrderByCreatedAtDesc(postId, pageProps.getReplySize());
-
-        Collections.reverse(dtoList); // 역순으로 뒤집기 (내림 → 오름)
-
+                        .findParentRepliesOrderByCreatedAtAsc(postId, page, pageProps.getPostSize());
         log.info("list size = {}", (dtoList != null ? dtoList.size() : null));
         return dtoList;
     }
@@ -99,7 +96,7 @@ public class FreeBoardPostService {
             List<GetFreeBoardPostReplyDto> parentDtoList,
             Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap) {
 
-        int preViewSize = pageProps.getChildrenReplyFreeViewSize();
+        int preViewSize = pageProps.getReplyFreeViewSize();
 
         for (GetFreeBoardPostReplyDto parentDto : parentDtoList) {
             List<GetFreeBoardPostReplyDto> allChildren =
@@ -113,9 +110,9 @@ public class FreeBoardPostService {
         }
     }
 
-    //getFreeBoardPostParentsReplies 사용하는 컨트롤러들 이 함수 완성되면 이거쓰도록 수정
-    public List<GetFreeBoardPostReplyDto> getParentsWithChildrenPreview(Long postId) {
-        List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId);
+    //추후에 인덱스 달아서 성능 업그레이드 하자
+    public List<GetFreeBoardPostReplyDto> getParentsWithChildrenPreview(Long postId, Long page) {
+        List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId, page);
 
         if (parentDtoList == null || parentDtoList.isEmpty()) {
             return parentDtoList;
@@ -215,10 +212,17 @@ public class FreeBoardPostService {
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
         post.increaseNumberOfComments();
 
+        FreeBoardPostReply parent = null;
+        if (form.getParentReplyId() != null) {
+            parent = freeBoardPostReplyRepository.findById(form.getParentReplyId())
+                    .orElseThrow(() -> new EntityNotFoundException("부모 댓글을 찾을 수 없습니다. id=" + form.getParentReplyId()));
+        }
+
         freeBoardPostReplyRepository.save(
                 FreeBoardPostReply.builder()
                         .member(member)
                         .freeBoardPost(post)
+                        .parentReply(parent)
                         .content(form.getContent())
                         .build()
         );
@@ -240,6 +244,36 @@ public class FreeBoardPostService {
         post.decreaseNumberOfComments();
 
         freeBoardPostReplyRepository.delete(reply);
+    }
+
+    //후에 인덱스 무조건 걸어야함, 풀스캔해야됨
+    private Long countParentReplies (Long postId) {
+        return freeBoardPostQueryRepository.countParentRepliesByPostId(postId);
+    }
+
+    private Long countPageNumber(long countParentReplies) {
+        long size = pageProps.getReplySize();
+        return (countParentReplies + size - 1) / size;
+    }
+
+    public ReplyPageInfo getReplyPageInfo(Long postId, Long currentPage) {
+        Long countParentReplies = countParentReplies(postId);
+        Long countPageNumber = countPageNumber(countParentReplies);
+        return ReplyPageInfo.parentsOnly(countParentReplies, countPageNumber, currentPage);
+    }
+
+    public List<GetFreeBoardPostReplyDto> getRepliesByPage(Long postId, Long page) {
+        List<GetFreeBoardPostReplyDto> parentDtoList = getFreeBoardPostParentsReplies(postId, page);
+
+        if (parentDtoList == null || parentDtoList.isEmpty()) {
+            return parentDtoList;
+        }
+
+        Map<Long, List<GetFreeBoardPostReplyDto>> childrenMap = getChildrenReplies(parentDtoList);
+        setPreviewChildren(parentDtoList, childrenMap);
+
+        return parentDtoList;
+
     }
 
 

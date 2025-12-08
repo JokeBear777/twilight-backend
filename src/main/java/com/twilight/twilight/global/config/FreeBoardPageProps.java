@@ -12,5 +12,5 @@ import org.springframework.stereotype.Component;
 public class FreeBoardPageProps {
     private int postSize;
     private int replySize;
-    private int childrenReplyFreeViewSize;
+    private int replyFreeViewSize;
 }

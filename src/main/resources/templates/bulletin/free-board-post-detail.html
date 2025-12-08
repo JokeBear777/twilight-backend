@@ -272,39 +272,145 @@
                                       th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
                             </div>
 
-                            <!-- 삭제 버튼: 본인 댓글일 때만 -->
-                            <form th:if="${c.memberId == memberId}"
-                                  th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/delete|}"
-                                  method="post"
-                                  class="d-inline reply-delete-form" >
-                                  <!--onsubmit="return confirm('이 댓글을 삭제하시겠습니까?');"> -->
-                                <button type="submit"
-                                        class="btn btn-sm btn-link text-muted p-0">
-                                    ✕
+                            <div class="d-flex align-items-center">
+                                <!-- 답글 버튼 (왼쪽) -->
+                                <button type="button" class="btn btn-link reply-toggle-btn p-0 mr-2"
+                                        style="font-size:.8rem;">
+                                    답글
                                 </button>
-                            </form>
+
+                                <!-- 삭제 버튼: 본인 댓글일 때만 (오른쪽 X) -->
+                                <form th:if="${c.memberId == memberId}"
+                                      th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/delete|}"
+                                      method="post" class="d-inline reply-delete-form">
+                                    <button type="submit" class="btn btn-sm btn-link text-muted p-0">
+                                        ✕
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
                         <div th:text="${c.content}">댓글 내용</div>
+
+                        <!-- 자식(대댓글) 프리뷰 영역 -->
+                        <div class="child-replies"
+                             th:if="${c.childrenList != null and !#lists.isEmpty(c.childrenList)}">
+
+                            <div th:each="child : ${c.childrenList}" class="child-comment-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <strong th:text="${child.replyWriterName}">대댓글 작성자</strong>
+                                        <span class="comment-meta"
+                                              th:text="${#temporals.format(child.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</span>
+                                    </div>
+
+                                    <!-- 대댓글 삭제 버튼: 본인 댓글일 때만 -->
+                                    <form th:if="${child.memberId == memberId}"
+                                          th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${child.freeBoardPostReplyId}/delete|}"
+                                          method="post"
+                                          class="d-inline reply-delete-form">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-link text-muted p-0">
+                                            ✕
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div th:text="${child.content}">대댓글 내용</div>
+                            </div>
+
+                        </div>
+
+                        <!-- 대댓글 작성 폼 (처음에는 숨김) -->
+                        <div class="child-comment-form d-none">
+                            <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply|}"
+                                  method="post"
+                                  class="comment-form">
+                                <!-- 이 댓글을 부모로 -->
+                                <input type="hidden" name="parentReplyId"
+                                       th:value="${c.freeBoardPostReplyId}"/>
+
+                                <div class="form-group mb-1">
+            <textarea name="content" rows="2" class="form-control"
+                      placeholder="답글을 입력하세요"
+                      style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.85rem;resize:none;"
+                      required></textarea>
+                                </div>
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-sm"
+                                            style="background-color:#8b5e34;color:#fff;border-radius:.6rem;">
+                                        등록
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- 자식 더보기 버튼 (hasMoreChildren == true일 때만 노출) -->
+                        <div th:if="${c.hasMoreChildren}" class="mt-1 child-more-wrap">
+                            <button type="button"
+                                    class="btn btn-link reply-toggle-btn child-more-btn p-0"
+                                    style="font-size:.8rem;"
+                                    th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/children|}">
+                                답글 더보기
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div th:if="${replies == null}" class="text-center text-muted p-2">댓글 데이터를 불러오지 않았습니다.</div>
 
                 <form th:action="@{|/bulletin/free-board/${post.freeBoardPostId}/reply|}"
                       method="post"
-                      class="mt-2"
+                      class="mt-2 comment-form"
                       id="comment-form">
                     <div class="form-group mb-2">
             <textarea name="content" rows="3" class="form-control" placeholder="댓글을 입력하세요"
-                      style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;" required></textarea>
+                      style="border:1px solid #d6ccc2;border-radius:.6rem;font-size:.9rem;resize:none;"
+                      required></textarea>
                     </div>
                     <button type="submit" class="btn btn-block"
                             style="background-color:#8b5e34;color:#fff;font-weight:600;border-radius:.6rem;">
                         댓글 등록
                     </button>
                 </form>
-            </div>
 
+                <div class="reply-pagination mt-2"
+                     th:if="${replyPageInfo != null and replyPageInfo.countParents != null
+              and replyPageInfo.countParents > replyPageInfo.pageSize}">
+
+                    <ul class="pagination justify-content-center mb-0" style="font-size:.8rem;">
+                        <!-- 이전 페이지 -->
+                        <li class="page-item"
+                            th:classappend="${replyPageInfo.currentPage == 1} ? 'disabled'">
+                            <a class="page-link reply-page-btn"
+                               href="#"
+                               th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply?page=${replyPageInfo.currentPage - 1}|}">
+                                &laquo;
+                            </a>
+                        </li>
+
+                        <!-- 페이지 번호들 -->
+                        <li class="page-item"
+                            th:each="pageNum : ${#numbers.sequence(1, replyPageInfo.pageSize)}"
+                            th:classappend="${pageNum == replyPageInfo.currentPage} ? ' active'">
+                            <a class="page-link reply-page-btn"
+                               href="#"
+                               th:text="${pageNum}"
+                               th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply?page=${pageNum}|}">
+                            </a>
+                        </li>
+
+                        <!-- 다음 페이지 -->
+                        <li class="page-item"
+                            th:classappend="${replyPageInfo.currentPage == replyPageInfo.pageSize} ? 'disabled'">
+                            <a class="page-link reply-page-btn"
+                               href="#"
+                               th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply?page=${replyPageInfo.currentPage + 1}|}">
+                                &raquo;
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
 
 
         </div>
@@ -440,44 +546,126 @@
         return true;
     }
 
-    let pendingDeleteForm = null; // ✅ 삭제 대상 form 저장
+    let pendingDeleteForm = null; // 삭제 대상 form 저장
 
     function bindReplyHandlers() {
         const repliesWrap = document.getElementById('replies-wrap');
         if (!repliesWrap) return;
 
-        // 댓글 작성 AJAX
-        const form = document.getElementById('comment-form');
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
+        // ✅ 1) 댓글/대댓글 작성 AJAX
+        repliesWrap.addEventListener('submit', async (e) => {
+            const form = e.target;
+            if (!form.classList.contains('comment-form')) {
+                return; // 우리 댓글 폼이 아니면 무시
+            }
 
-                const res = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
+            e.preventDefault();
+            const formData = new FormData(form);
 
-                if (!res.ok) {
-                    alert('댓글 등록 중 오류');
-                    return;
-                }
-
-                const html = await res.text();
-                replaceRepliesFromHtml(html);
-                bindReplyHandlers(); // 새 DOM에 다시 바인딩
+            const res = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
-        }
 
-        // 댓글 삭제 "요청 가로채기" → 모달 띄우기
+            if (!res.ok) {
+                alert('댓글 등록 중 오류');
+                return;
+            }
+
+            const html = await res.text();
+            replaceRepliesFromHtml(html);
+            bindReplyHandlers();
+        });
+
+        // ✅ 2) 댓글 삭제 모달
         repliesWrap.addEventListener('submit', (e) => {
             const target = e.target;
             if (!target.classList.contains('reply-delete-form')) return;
 
             e.preventDefault();
-            pendingDeleteForm = target;                 // 어떤 댓글을 지울지 저장
-            $('#replyDeleteModal').modal('show');       // 모달 오픈
+            pendingDeleteForm = target;
+            $('#replyDeleteModal').modal('show');
+        });
+
+        // ✅ 3) 클릭 이벤트(답글 더보기 + 답글 폼 토글 동시에 처리)
+        repliesWrap.addEventListener('click', async (e) => {
+            // 3-1) 답글 더보기 버튼
+            const moreBtn = e.target.closest('.child-more-btn');
+            if (moreBtn) {
+                e.preventDefault();
+                const url = moreBtn.dataset.url;
+                if (!url) return;
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!res.ok) {
+                        alert('답글 더보기 요청 중 오류가 발생했습니다.');
+                        return;
+                    }
+
+                    const html = await res.text();
+                    replaceRepliesFromHtml(html);
+                    bindReplyHandlers();
+                } catch (err) {
+                    console.error(err);
+                    alert('네트워크 오류가 발생했습니다.');
+                }
+
+                return; // 더보기 처리 끝
+            }
+
+            // 3-2) "답글" 버튼 → 대댓글 폼 열기/닫기
+            const replyBtn = e.target.closest('.reply-toggle-btn');
+            if (replyBtn) {
+                e.preventDefault();
+
+                // 이 버튼이 포함된 댓글 블록 찾기
+                const commentItem = replyBtn.closest('.comment-item');
+                if (!commentItem) return;
+
+                // 해당 댓글 아래의 대댓글 폼
+                const childFormWrap = commentItem.querySelector('.child-comment-form');
+                if (!childFormWrap) return;
+
+                // d-none 토글 (보이기/숨기기)
+                childFormWrap.classList.toggle('d-none');
+
+                // 열릴 때 textarea에 포커스
+                if (!childFormWrap.classList.contains('d-none')) {
+                    const textarea = childFormWrap.querySelector('textarea');
+                    if (textarea) textarea.focus();
+                }
+            }
+
+            // 3-3) 페이지 버튼
+            const pageBtn = e.target.closest('.reply-page-btn');
+            if (pageBtn) {
+                e.preventDefault();
+                const url = pageBtn.dataset.url;
+                if (!url) return;
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!res.ok) {
+                        alert('댓글 페이지를 불러오는 중 오류가 발생했습니다.');
+                        return;
+                    }
+                    const html = await res.text();
+                    replaceRepliesFromHtml(html);
+                    bindReplyHandlers(); // 새 DOM에 이벤트 다시 바인딩
+                } catch (err) {
+                    console.error(err);
+                    alert('네트워크 오류가 발생했습니다.');
+                }
+            }
         });
     }
 
@@ -562,3 +750,4 @@
 </body>
 
 </html>
+

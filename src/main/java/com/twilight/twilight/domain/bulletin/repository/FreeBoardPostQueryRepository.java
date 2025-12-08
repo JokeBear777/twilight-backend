@@ -11,4 +11,6 @@ public interface FreeBoardPostQueryRepository {
     List<GetFreeBoardPostReplyDto> findLatestChildReplyByReplyId(Long replyId, int count);
     List<GetFreeBoardPostReplyDto> findAllChildReplyByReplyId(Long replyId);
     List<GetFreeBoardPostReplyDto> findChildrenByParentIds(List<Long> parentIds);
+    long countParentRepliesByPostId(Long postId);
+    public List<GetFreeBoardPostReplyDto> findParentRepliesOrderByCreatedAtAsc(Long postId, Long page, int size);
 }
