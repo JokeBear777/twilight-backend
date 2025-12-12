@@ -56,6 +56,7 @@
             padding: 0;
             /* 리스트가 자체 패딩 갖도록 0 */
             text-align: left;
+            min-height: 0;
         }
 
         .free-board-post-list {
@@ -165,6 +166,15 @@
         .footer-nav .btn-dark small {
             font-size: 0.75rem;
         }
+
+        .scroll-area {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            /* iOS 부드러운 스크롤 */
+            padding-bottom: .5rem;
+            /* footer와 간격 */
+        }
     </style>
 
     <script>
@@ -206,38 +216,40 @@
 
 
         <div class="card-body-center">
-            <!-- ✅ 테스트용 더미 데이터 (배포 시 제거) -->
-            <div class="free-board-post-list" id="post-list">
+            <div class="scroll-area">
 
-                <!--
-             th:with="freeBoardPostList=${[
-   {'id':1,'title':'첫 글입니다','commentCount':12,'timeAgo':'3분 전','writer':'민우','viewCount':123,'likeCount':7},
-   {'id':2,'title':'두 번째 테스트 글','commentCount':3,'timeAgo':'7분 전','writer':'홍길동','viewCount':45,'likeCount':2},
-   {'id':3,'title':'세 번째 글입니다 제목이 길면 이렇게 길어져도 말줄임으로 깔끔하게 처리됩니다','commentCount':0,'timeAgo':'12분 전','writer':'Alice','viewCount':9,'likeCount':0},
-   {'id':4,'title':'네 번째 글 - 모바일에선 밑줄이 화면 끝까지!','commentCount':8,'timeAgo':'20분 전','writer':'Bob','viewCount':88,'likeCount':10}
- ]}">
--->
-                <div th:each="post : ${postList}" class="notice-item">
-                    <!-- 첫 줄: 댓글 수 | 제목 -->
-                    <div class="post-top">
-                        <span class="comment-count" th:text="${post.numberOfComments}">12</span>
-                        <a class="post-title" th:href="@{/bulletin/free-board/{id}(id=${post.freeBoardPostId})}"
-                           th:text="${post.title}">[TEST] 제목입니다. 1</a>
-                    </div>
+                <!-- ✅ 테스트용 더미 데이터 (배포 시 제거) -->
+                <div class="free-board-post-list" id="post-list">
 
-                    <!-- 두 번째 줄: | x분전 | 글쓴이 | 조회 | 추천 -->
-                    <div class="post-bottom">
+                    <!--
+                 th:with="freeBoardPostList=${[
+       {'id':1,'title':'첫 글입니다','commentCount':12,'timeAgo':'3분 전','writer':'민우','viewCount':123,'likeCount':7},
+       {'id':2,'title':'두 번째 테스트 글','commentCount':3,'timeAgo':'7분 전','writer':'홍길동','viewCount':45,'likeCount':2},
+       {'id':3,'title':'세 번째 글입니다 제목이 길면 이렇게 길어져도 말줄임으로 깔끔하게 처리됩니다','commentCount':0,'timeAgo':'12분 전','writer':'Alice','viewCount':9,'likeCount':0},
+       {'id':4,'title':'네 번째 글 - 모바일에선 밑줄이 화면 끝까지!','commentCount':8,'timeAgo':'20분 전','writer':'Bob','viewCount':88,'likeCount':10}
+     ]}">
+    -->
+                    <div th:each="post : ${postList}" class="notice-item">
+                        <!-- 첫 줄: 댓글 수 | 제목 -->
+                        <div class="post-top">
+                            <span class="comment-count" th:text="${post.numberOfComments}">12</span>
+                            <a class="post-title" th:href="@{/bulletin/free-board/{id}(id=${post.freeBoardPostId})}"
+                               th:text="${post.title}">[TEST] 제목입니다. 1</a>
+                        </div>
+
+                        <!-- 두 번째 줄: | x분전 | 글쓴이 | 조회 | 추천 -->
+                        <div class="post-bottom">
                         <span class="post-time"
                               th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2022-03-12 12:23</span>
-                        <span class="separator">|</span>
-                        <span class="post-writer" th:text="${post.name}">작성자</span>
-                        <span class="separator">|</span>
-                        <span class="post-view" th:text="'조회 ' + ${post.views}">조회 12</span>
-                        <span class="separator">|</span>
-                        <span class="post-like" th:text="'추천 ' + ${post.numberOfRecommendations}">추천 5</span>
+                            <span class="separator">|</span>
+                            <span class="post-writer" th:text="${post.name}">작성자</span>
+                            <span class="separator">|</span>
+                            <span class="post-view" th:text="'조회 ' + ${post.views}">조회 12</span>
+                            <span class="separator">|</span>
+                            <span class="post-like" th:text="'추천 ' + ${post.numberOfRecommendations}">추천 5</span>
+                        </div>
                     </div>
                 </div>
-
             </div>
         </div>
 

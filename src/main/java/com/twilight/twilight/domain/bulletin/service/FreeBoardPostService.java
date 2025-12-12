@@ -276,6 +276,15 @@ public class FreeBoardPostService {
 
     }
 
+    public List<GetFreeBoardPostListDto> getPostsByCursor(Long cursor, int size) {
+        if (cursor == null) {
+            return null;
+        }
+
+
+        return null;
+    }
+
 
 
 }
