@@ -40,18 +40,9 @@ public class FreeBoardApiController {
                 .map(Cursor::lastId)
                 .orElse(null);
 
-        List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getPostsByCursor(lastId, pageSize + 1);
+        List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getPostsByCursor(pageRequest);
 
-        boolean hasNext = postLists.size() > pageSize;
-        Cursor nextCursor = null;
-
-        if (hasNext) {
-            GetFreeBoardPostListDto last = postLists.get(postLists.size() - 1);
-            nextCursor = new Cursor(last.getFreeBoardPostId(), last.getCreatedAt());
-            postLists.remove(postLists.size() - 1);
-        }
-
-        return new CursorResponse<>(postLists, nextCursor, hasNext);
+        return freeBoardPostService.getCursorResponse(postLists, pageSize);
     }
 
 }

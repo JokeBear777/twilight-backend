@@ -20,4 +20,8 @@ public record PageCursorRequest(
         }
         return size;
     }
+
+    public static PageCursorRequest first(Integer size) {
+        return new PageCursorRequest(null, null, size);
+    }
 }

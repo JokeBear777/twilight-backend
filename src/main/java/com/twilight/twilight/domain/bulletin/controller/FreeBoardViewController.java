@@ -4,6 +4,7 @@ import com.twilight.twilight.domain.bulletin.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.dto.*;
 import com.twilight.twilight.domain.bulletin.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
+import com.twilight.twilight.global.config.FreeBoardPageProps;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,15 +23,30 @@ import java.util.List;
 public class FreeBoardViewController {
 
     private final FreeBoardPostService freeBoardPostService;
+    private final FreeBoardPageProps pageProps;
+    private final FreeBoardPageProps freeBoardPageProps;
 
     @GetMapping("/list")
     public String freeBoardList(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
-        List<GetFreeBoardPostListDto> list = freeBoardPostService.getFreeBoardPostsByStaticVariable();
-        model.addAttribute("postList", list);
+        List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getPostsByCursor(
+                PageCursorRequest.first(null)
+        );
+
+
         Long numberOfPosts = freeBoardPostService.getTotalPostCount();
+
+        CursorResponse<GetFreeBoardPostListDto> cursorResponse = freeBoardPostService.getCursorResponse(
+                postLists,
+                freeBoardPageProps.getPostSize()
+        );
+
+        model.addAttribute("postList", cursorResponse.data());
         model.addAttribute("postCount", numberOfPosts);
+        model.addAttribute("nextCursor", cursorResponse.nextCursor());
+        model.addAttribute("hasNext", cursorResponse.hasNext());
+
         return "bulletin/free-board-list";
     }
 

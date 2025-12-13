@@ -276,14 +276,29 @@ public class FreeBoardPostService {
 
     }
 
-    public List<GetFreeBoardPostListDto> getPostsByCursor(Long cursor, int size) {
-        if (cursor == null) {
-            return null;
+    public List<GetFreeBoardPostListDto> getPostsByCursor(PageCursorRequest pageCursorRequest) {
+        Cursor requestCursor = pageCursorRequest.toCursor();
+        int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
+
+        return freeBoardPostQueryRepository.findPostsByCursor(requestCursor, pageSizeOrDefault + 1);
+    }
+
+    public CursorResponse<GetFreeBoardPostListDto> getCursorResponse(
+            List<GetFreeBoardPostListDto> postLists,
+            int pageSize
+    ) {
+        boolean hasNext = postLists.size() > pageSize;
+        Cursor nextCursor = null;
+
+        if (hasNext) {
+            GetFreeBoardPostListDto last = postLists.get(postLists.size() - 1);
+            nextCursor = new Cursor(last.getFreeBoardPostId(), last.getCreatedAt());
+            postLists.remove(postLists.size() - 1);
         }
 
-
-        return null;
+        return new CursorResponse<>(postLists, nextCursor, hasNext);
     }
+
 
 
 
