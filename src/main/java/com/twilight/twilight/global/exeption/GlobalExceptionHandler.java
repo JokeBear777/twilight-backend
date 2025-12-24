@@ -1,6 +1,7 @@
 package com.twilight.twilight.global.exeption;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import java.util.NoSuchElementException;
 
 //예외가 다른 핸들러에서 안잡혔을때, 마지막 안전장치
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
@@ -21,6 +23,8 @@ public class GlobalExceptionHandler {
        String accept = request.getHeader("Accept");
         boolean wantsJson = accept != null && accept.contains("application/json")
                 || request.getRequestURI().startsWith("/api/");
+
+        log.info("에러메세지:{}" , e.getMessage());
 
         if (wantsJson) {
             return handleApiError(e, request);

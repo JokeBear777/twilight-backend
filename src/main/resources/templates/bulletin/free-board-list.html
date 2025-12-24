@@ -180,16 +180,129 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const postList = document.getElementById("post-list");
-            const posts = postList.querySelectorAll(".notice-item");
+            const sentinel = document.getElementById("scroll-sentinel");
+            const scrollRoot = document.querySelector(".scroll-area");
 
+            console.log("[init] postList:", !!postList, "sentinel:", !!sentinel, "scrollRoot:", !!scrollRoot);
+
+            if (!postList) return;
+
+            // 게시글 없을 때 메시지
+            const posts = postList.querySelectorAll(".notice-item");
             if (posts.length === 0) {
                 const emptyMessage = document.createElement("p");
                 emptyMessage.textContent = "게시글이 없습니다.";
                 emptyMessage.style.textAlign = "center";
                 emptyMessage.style.color = "#777";
                 emptyMessage.style.margin = "2rem 0";
-                postList.appendChild(emptyMessage);
+                postList.prepend(emptyMessage);
             }
+
+            if (!sentinel) {
+                console.error("[init] #scroll-sentinel 이 DOM에 없습니다. post-list 내부 맨 아래에 추가하세요.");
+                return;
+            }
+
+            let isLoading = false;
+            let hasNext = true;
+            let lastId = null;// cursor.lastId
+            let lastCreatedAt = null;
+            const pageSize = 10;
+
+            async function loadMorePosts() {
+                if (isLoading || !hasNext) return;
+                isLoading = true;
+
+                let url = `/api/v1/bulletin/free-board?pageSize=10`;
+                if (lastId !== null && lastCreatedAt !== null) {
+                    url += `&lastId=${lastId}`;
+                    url += `&lastCreatedAt=${encodeURIComponent(lastCreatedAt)}`;
+                }
+
+                console.log("[fetch]", url);
+
+                try {
+                    const res = await fetch(url, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    if (!res.ok) throw new Error("요청 실패: " + res.status);
+
+                    const result = await res.json();
+
+                    result.data.forEach(post => {
+                        postList.insertBefore(createPostElement(post), sentinel);
+                    });
+
+                    hasNext = result.hasNext;
+                    lastId = result.nextCursor ? result.nextCursor.lastId : null;
+                    lastCreatedAt = result.nextCursor?.lastCreatedAt ?? null;
+
+                    if (!hasNext) observer.disconnect();
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    isLoading = false;
+                }
+            }
+
+            function createPostElement(post) {
+                const item = document.createElement("div");
+                item.className = "notice-item";
+                item.innerHTML = `
+      <div class="post-top">
+        <span class="comment-count">${post.numberOfComments ?? 0}</span>
+        <a class="post-title" href="/bulletin/free-board/${post.freeBoardPostId}">
+          ${escapeHtml(post.title ?? "")}
+        </a>
+      </div>
+      <div class="post-bottom">
+        <span>${formatDate(post.createdAt)}</span>
+        <span class="separator">|</span>
+        <span>${escapeHtml(post.name ?? "")}</span>
+        <span class="separator">|</span>
+        <span>조회 ${post.views ?? 0}</span>
+        <span class="separator">|</span>
+        <span>추천 ${post.numberOfRecommendations ?? 0}</span>
+      </div>
+    `;
+                return item;
+            }
+
+            function formatDate(isoString) {
+                if (!isoString) return "";
+                const date = new Date(isoString);
+                if (isNaN(date.getTime())) return String(isoString); // 역직렬화 포맷 이상할 때 대비
+                return date.toLocaleString("ko-KR", {
+                    year: "numeric", month: "2-digit", day: "2-digit",
+                    hour: "2-digit", minute: "2-digit"
+                });
+            }
+
+            function escapeHtml(str) {
+                return String(str)
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#039;");
+            }
+
+            // root는 scroll-area (너 코드처럼)
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    console.log("[observer] intersect");
+                    loadMorePosts();
+                }
+            }, {
+                root: scrollRoot,     // scroll-area에서 스크롤되므로 여기로 지정
+                rootMargin: "200px",  // 바닥 닿기 전에 미리 로딩
+                threshold: 0.01
+            });
+
+            observer.observe(sentinel);
+
+            // 초기에도 한 번 채워주기 (스크롤이 충분히 안 생기면 observer가 바로 안 불릴 수 있음)
+            loadMorePosts();
         });
     </script>
 </head>
@@ -249,7 +362,11 @@
                             <span class="post-like" th:text="'추천 ' + ${post.numberOfRecommendations}">추천 5</span>
                         </div>
                     </div>
+
+                    <!-- 무한 스크롤 감지용 -->
+                    <div id="scroll-sentinel" style="height: 1px;"></div>
                 </div>
+
             </div>
         </div>
 
