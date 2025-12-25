@@ -299,6 +299,41 @@ public class FreeBoardPostService {
         return new CursorResponse<>(postLists, nextCursor, hasNext);
     }
 
+    public CursorResponse<GetFreeBoardPostReplyDto> getReplyCursorResponse(
+            List<GetFreeBoardPostReplyDto> replyDtoList,
+            int pageSize
+    ) {
+        boolean hasNext = replyDtoList.size() > pageSize;
+        Cursor nextCursor = null;
+
+        if (hasNext) {
+            GetFreeBoardPostReplyDto last = replyDtoList.get(replyDtoList.size() - 1);
+            nextCursor = new Cursor(last.getFreeBoardPostReplyId(), last.getCreatedAt());
+            replyDtoList.remove(replyDtoList.size() - 1);
+        }
+
+        log.info("[Test] ReplyCursor nextCursor = {}, replyDtoList = {} ", nextCursor, replyDtoList);
+
+        return new CursorResponse<>(replyDtoList, nextCursor, hasNext);
+    }
+
+
+    public List<GetFreeBoardPostReplyDto> getChildrenRepliesByCursor(
+            PageCursorRequest pageCursorRequest,
+            Long postId,
+            Long parentReplyId
+            ) {
+        Cursor requestCursor = pageCursorRequest.toCursor();
+        int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
+
+        return  freeBoardPostQueryRepository.findChildReplyByCursor(
+                requestCursor,
+                pageSizeOrDefault,
+                postId,
+                parentReplyId
+        );
+    }
+
 
 
 

@@ -246,4 +246,55 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .fetch();
     }
 
+    @Override
+    public List<GetFreeBoardPostReplyDto> findChildReplyByCursor(
+            Cursor cursor,
+            int size,
+            Long postId,
+            Long parentId
+    ) {
+        if (postId == null || parentId == null) {
+            return List.of();
+        }
+
+        BooleanBuilder where = new BooleanBuilder();
+
+        where.and(qFreeBoardPostReply.freeBoardPost.freeBoardPostId.eq(postId));
+        where.and(qFreeBoardPostReply.parentReply.freeBoardPostReplyId.eq(parentId));
+
+        if (cursor != null
+                && cursor.lastCreatedAt() != null
+                && cursor.lastId() != null) {
+
+            where.and(
+                    qFreeBoardPostReply.createdAt.gt(cursor.lastCreatedAt())
+                            .or(
+                                    qFreeBoardPostReply.createdAt.eq(cursor.lastCreatedAt())
+                                            .and(qFreeBoardPostReply.freeBoardPostReplyId.gt(cursor.lastId()))
+                            )
+            );
+        }
+
+        return query
+                .select(Projections.constructor(
+                        GetFreeBoardPostReplyDto.class,
+                        qFreeBoardPostReply.freeBoardPostReplyId,                  // replyId
+                        qFreeBoardPostReply.parentReply.freeBoardPostReplyId,     // parentReplyId
+                        qMember.memberName,                                       // replyWriterName
+                        qMember.memberId,                                         // memberId
+                        qFreeBoardPostReply.content,
+                        qFreeBoardPostReply.createdAt,
+                        qFreeBoardPostReply.updatedAt
+                ))
+                .from(qFreeBoardPostReply)
+                .join(qFreeBoardPostReply.member, qMember)
+                .where(where)
+                .orderBy(
+                        qFreeBoardPostReply.createdAt.asc(),
+                        qFreeBoardPostReply.freeBoardPostReplyId.asc()
+                )
+                .limit(size + 1) // hasMore 판단용
+                .fetch();
+    }
+
 }
