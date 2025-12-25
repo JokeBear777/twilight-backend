@@ -1,7 +1,9 @@
 package com.twilight.twilight.domain.bulletin.repository;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.twilight.twilight.domain.bulletin.dto.Cursor;
 import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostListDto;
 import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostReplyDto;
 import com.twilight.twilight.domain.bulletin.entity.QFreeBoardPost;
@@ -10,6 +12,7 @@ import com.twilight.twilight.domain.member.entity.QMember;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.twilight.twilight.domain.member.entity.QMember.member;
@@ -99,8 +102,6 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .offset(offset)
                 .limit(size)
                 .fetch();
-
-
     }
 
     @Override
@@ -195,6 +196,105 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .fetchOne();
 
         return (count != null) ? count : 0L;
+    }
+
+    @Override
+    public List<GetFreeBoardPostListDto> findPostsByCursor(
+            Cursor cursor,
+            int size) {
+        BooleanBuilder where = new BooleanBuilder();
+
+        Long lastId = null;
+        LocalDateTime lastCreatedAt = null;
+
+        if (cursor != null) {
+            lastId = cursor.lastId();
+            lastCreatedAt = cursor.lastCreatedAt();
+        }
+
+        if (lastId != null && lastCreatedAt != null) {
+            where.and(
+                    qFreeBoardPost.createdAt.lt(lastCreatedAt)
+                            .or(
+                                    qFreeBoardPost.createdAt.eq(lastCreatedAt)
+                                            .and(qFreeBoardPost.freeBoardPostId.lt(lastId))
+
+                            )
+            );
+        }
+
+        return query
+                .select(Projections.constructor(GetFreeBoardPostListDto.class,
+                        qFreeBoardPost.freeBoardPostId,
+                        qMember.memberId,
+                        qFreeBoardPost.title,
+                        qFreeBoardPost.content,
+                        qMember.memberName,
+                        qFreeBoardPost.views,
+                        qFreeBoardPost.numberOfRecommendations,
+                        qFreeBoardPost.numberOfComments,
+                        qFreeBoardPost.createdAt
+                ))
+                .from(qFreeBoardPost)
+                .join(qFreeBoardPost.member,member)
+                .where(where)
+                .orderBy(
+                        qFreeBoardPost.createdAt.desc(),
+                        qFreeBoardPost.freeBoardPostId.desc()
+                )
+                .limit(size + 1)
+                .fetch();
+    }
+
+    @Override
+    public List<GetFreeBoardPostReplyDto> findChildReplyByCursor(
+            Cursor cursor,
+            int size,
+            Long postId,
+            Long parentId
+    ) {
+        if (postId == null || parentId == null) {
+            return List.of();
+        }
+
+        BooleanBuilder where = new BooleanBuilder();
+
+        where.and(qFreeBoardPostReply.freeBoardPost.freeBoardPostId.eq(postId));
+        where.and(qFreeBoardPostReply.parentReply.freeBoardPostReplyId.eq(parentId));
+
+        if (cursor != null
+                && cursor.lastCreatedAt() != null
+                && cursor.lastId() != null) {
+
+            where.and(
+                    qFreeBoardPostReply.createdAt.gt(cursor.lastCreatedAt())
+                            .or(
+                                    qFreeBoardPostReply.createdAt.eq(cursor.lastCreatedAt())
+                                            .and(qFreeBoardPostReply.freeBoardPostReplyId.gt(cursor.lastId()))
+                            )
+            );
+        }
+
+        return query
+                .select(Projections.constructor(
+                        GetFreeBoardPostReplyDto.class,
+                        qFreeBoardPostReply.freeBoardPostReplyId,                  // replyId
+                        qFreeBoardPostReply.parentReply.freeBoardPostReplyId,     // parentReplyId
+                        qMember.memberName,                                       // replyWriterName
+                        qMember.memberId,                                         // memberId
+                        qFreeBoardPostReply.content,
+                        qFreeBoardPostReply.createdAt,
+                        qFreeBoardPostReply.updatedAt
+                ))
+                .from(qFreeBoardPostReply)
+                .join(qFreeBoardPostReply.member, qMember)
+                .where(where)
+                .orderBy(
+                        qFreeBoardPostReply.createdAt.asc(),
+                        qFreeBoardPostReply.freeBoardPostReplyId.asc()
+                )
+                .limit(size + 1) // hasMore 판단용
+                .fetch();
     }
 
 }

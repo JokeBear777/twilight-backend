@@ -274,7 +274,10 @@
 
                 <div th:if="${replies != null}">
                     <div th:if="${#lists.isEmpty(replies)}" class="text-center text-muted p-2">댓글이 없습니다.</div>
-                    <div th:each="c : ${replies}" class="comment-item">
+                    <div th:each="c : ${replies}"
+                         class="comment-item"
+                         th:data-parent-id="${c.freeBoardPostReplyId}"
+                         th:data-post-id="${post.freeBoardPostId}">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <strong th:text="${c.replyWriterName}">사용자</strong>
@@ -304,7 +307,9 @@
 
                         <!-- 자식(대댓글) 프리뷰 영역 -->
                         <div class="child-replies"
-                             th:if="${c.childrenList != null and !#lists.isEmpty(c.childrenList)}">
+                             th:if="${c.childrenList != null and !#lists.isEmpty(c.childrenList)}"
+                             th:id="'child-replies-' + ${c.freeBoardPostReplyId}"
+                             style="max-height:220px; overflow-y:auto;">
 
                             <div th:each="child : ${c.childrenList}" class="child-comment-item">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -328,6 +333,10 @@
 
                                 <div th:text="${child.content}">대댓글 내용</div>
                             </div>
+
+                            <!-- 커서 무한스크롤 sentinel (처음엔 비활성) -->
+                            <div class="child-sentinel"
+                                 th:data-parent-id="${c.freeBoardPostReplyId}"></div>
 
                         </div>
 
@@ -363,7 +372,8 @@
                             <button type="button"
                                     class="btn btn-link reply-toggle-btn child-more-btn p-0"
                                     style="font-size:.8rem;"
-                                    th:data-url="@{|/bulletin/free-board/${post.freeBoardPostId}/reply/${c.freeBoardPostReplyId}/children|}">
+                                    th:data-parent-id="${c.freeBoardPostReplyId}"
+                                    th:data-post-id="${post.freeBoardPostId}">
                                 답글 더보기
                             </button>
                         </div>
@@ -761,6 +771,109 @@
             $('#recommendAlertModal').modal('show');
         }
 
+    });
+
+    const childCursorMap = new Map();
+
+    function initChildCursorFromDom(parentId) {
+        const container = document.getElementById(`child-replies-${parentId}`);
+        const items = container.querySelectorAll('.child-comment-item');
+
+        // 이미 SSR로 3개가 있음 → 마지막 기준으로 커서 시작
+        if (items.length > 0) {
+            const last = items[items.length - 1];
+            childCursorMap.set(parentId, {
+                lastId: last.dataset.replyId ?? null,
+                lastCreatedAt: last.dataset.createdAt ?? null,
+                loading: false,
+                hasNext: true
+            });
+        } else {
+            childCursorMap.set(parentId, {
+                lastId: null,
+                lastCreatedAt: null,
+                loading: false,
+                hasNext: true
+            });
+        }
+    }
+
+    async function loadMoreChildReplies(postId, parentId) {
+        const state = childCursorMap.get(parentId);
+        if (!state || state.loading || !state.hasNext) return;
+
+        state.loading = true;
+
+        let url = `/api/v1/bulletin/free-board/${postId}/${parentId}?pageSize=5`;
+        if (state.lastId && state.lastCreatedAt) {
+            url += `&lastId=${state.lastId}&lastCreatedAt=${state.lastCreatedAt}`;
+        }
+
+        try {
+            const res = await fetch(url);
+            const result = await res.json();
+
+            const container = document.getElementById(`child-replies-${parentId}`);
+            const sentinel = container.querySelector('.child-sentinel');
+
+            result.data.forEach(r => {
+                const el = createChildReplyEl(r);
+                container.insertBefore(el, sentinel);
+
+                state.lastId = r.freeBoardPostReplyId;
+                state.lastCreatedAt = r.createdAt;
+            });
+
+            state.hasNext = result.hasNext;
+        } finally {
+            state.loading = false;
+        }
+    }
+
+    function createChildReplyEl(reply) {
+        const div = document.createElement('div');
+        div.className = 'child-comment-item';
+        div.dataset.replyId = reply.freeBoardPostReplyId;
+        div.dataset.createdAt = reply.createdAt;
+
+        div.innerHTML = `
+        <div>
+            <strong>${reply.replyWriterName}</strong>
+            <span class="comment-meta">
+                ${new Date(reply.createdAt).toLocaleString('ko-KR')}
+            </span>
+        </div>
+        <div>${reply.content}</div>
+    `;
+        return div;
+    }
+
+    /* 답글 더보기 클릭 */
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.child-more-btn');
+        if (!btn) return;
+
+        const parentId = btn.dataset.parentId;
+        const postId = btn.dataset.postId;
+
+        btn.remove(); // 버튼 제거
+
+        initChildCursorFromDom(parentId);
+        loadMoreChildReplies(postId, parentId);
+
+        const container = document.getElementById(`child-replies-${parentId}`);
+        const sentinel = container.querySelector('.child-sentinel');
+
+        const observer = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+                loadMoreChildReplies(postId, parentId);
+            }
+        }, {
+            root: container,
+            rootMargin: '80px'
+        });
+
+        observer.observe(sentinel);
     });
 </script>
 </body>
