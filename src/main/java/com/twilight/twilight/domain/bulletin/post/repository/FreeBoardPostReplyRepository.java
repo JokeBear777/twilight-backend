@@ -1,6 +1,6 @@
-package com.twilight.twilight.domain.bulletin.repository;
+package com.twilight.twilight.domain.bulletin.post.repository;
 
-import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostReply;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostReply;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

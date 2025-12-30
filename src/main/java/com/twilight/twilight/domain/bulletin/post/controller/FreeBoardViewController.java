@@ -1,8 +1,8 @@
-package com.twilight.twilight.domain.bulletin.controller;
+package com.twilight.twilight.domain.bulletin.post.controller;
 
-import com.twilight.twilight.domain.bulletin.common.RecommendResult;
-import com.twilight.twilight.domain.bulletin.dto.*;
-import com.twilight.twilight.domain.bulletin.service.FreeBoardPostService;
+import com.twilight.twilight.domain.bulletin.post.common.RecommendResult;
+import com.twilight.twilight.domain.bulletin.post.dto.*;
+import com.twilight.twilight.domain.bulletin.post.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
 import lombok.RequiredArgsConstructor;

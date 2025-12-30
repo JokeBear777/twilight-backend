@@ -1,8 +1,4 @@
-package com.twilight.twilight.domain.bulletin.dto;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+package com.twilight.twilight.domain.bulletin.post.dto;
 
 import java.util.List;
 

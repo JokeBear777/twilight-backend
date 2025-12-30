@@ -1,12 +1,11 @@
-package com.twilight.twilight.domain.bulletin.controller;
+package com.twilight.twilight.domain.bulletin.post.controller;
 
-import com.twilight.twilight.domain.bulletin.dto.*;
-import com.twilight.twilight.domain.bulletin.service.FreeBoardPostService;
+import com.twilight.twilight.domain.bulletin.post.dto.*;
+import com.twilight.twilight.domain.bulletin.post.service.FreeBoardPostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor

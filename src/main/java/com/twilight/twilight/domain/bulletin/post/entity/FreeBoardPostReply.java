@@ -1,4 +1,4 @@
-package com.twilight.twilight.domain.bulletin.entity;
+package com.twilight.twilight.domain.bulletin.post.entity;
 
 
 import com.twilight.twilight.domain.member.entity.Member;

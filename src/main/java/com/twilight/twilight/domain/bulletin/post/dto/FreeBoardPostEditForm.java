@@ -1,4 +1,4 @@
-package com.twilight.twilight.domain.bulletin.dto;
+package com.twilight.twilight.domain.bulletin.post.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,8 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class FreeBoardPostForm {
+public class FreeBoardPostEditForm {
     private String title;
     private String content;
-    private Long parentReplyId;
 }

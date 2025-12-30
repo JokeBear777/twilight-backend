@@ -1,4 +1,4 @@
-package com.twilight.twilight.domain.bulletin.dto;
+package com.twilight.twilight.domain.bulletin.post.dto;
 
 import lombok.*;
 

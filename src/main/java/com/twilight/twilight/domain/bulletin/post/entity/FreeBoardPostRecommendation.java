@@ -1,4 +1,4 @@
-package com.twilight.twilight.domain.bulletin.entity;
+package com.twilight.twilight.domain.bulletin.post.entity;
 
 import com.twilight.twilight.domain.member.entity.Member;
 import jakarta.persistence.*;
@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 

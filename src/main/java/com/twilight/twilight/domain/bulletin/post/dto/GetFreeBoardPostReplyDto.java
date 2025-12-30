@@ -1,6 +1,6 @@
-package com.twilight.twilight.domain.bulletin.dto;
+package com.twilight.twilight.domain.bulletin.post.dto;
 
-import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostReply;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostReply;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

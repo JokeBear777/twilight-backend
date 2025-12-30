@@ -1,13 +1,13 @@
-package com.twilight.twilight.domain.bulletin.repository;
+package com.twilight.twilight.domain.bulletin.post.repository;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.twilight.twilight.domain.bulletin.dto.Cursor;
-import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostListDto;
-import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostReplyDto;
-import com.twilight.twilight.domain.bulletin.entity.QFreeBoardPost;
-import com.twilight.twilight.domain.bulletin.entity.QFreeBoardPostReply;
+import com.twilight.twilight.domain.bulletin.post.dto.Cursor;
+import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostListDto;
+import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostReplyDto;
+import com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPost;
+import com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPostReply;
 import com.twilight.twilight.domain.member.entity.QMember;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

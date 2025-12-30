@@ -1,14 +1,16 @@
-package com.twilight.twilight.domain.bulletin.service;
+package com.twilight.twilight.domain.bulletin.post.service;
 
-import com.twilight.twilight.domain.bulletin.common.RecommendResult;
-import com.twilight.twilight.domain.bulletin.dto.*;
-import com.twilight.twilight.domain.bulletin.entity.FreeBoardPost;
-import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostRecommendation;
-import com.twilight.twilight.domain.bulletin.entity.FreeBoardPostReply;
-import com.twilight.twilight.domain.bulletin.repository.*;
+import com.twilight.twilight.domain.bulletin.post.common.RecommendResult;
+import com.twilight.twilight.domain.bulletin.post.dto.*;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostRecommendation;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostReply;
+import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostQueryRepository;
+import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostRecommendationRepository;
+import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostReplyRepository;
+import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostRepository;
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
-import com.twilight.twilight.global.config.BulletinPageProps;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;

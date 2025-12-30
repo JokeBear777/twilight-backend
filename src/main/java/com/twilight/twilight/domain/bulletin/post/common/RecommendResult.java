@@ -1,4 +1,4 @@
-package com.twilight.twilight.domain.bulletin.common;
+package com.twilight.twilight.domain.bulletin.post.common;
 
 public enum RecommendResult {
     OK,

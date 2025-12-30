@@ -1,8 +1,8 @@
-package com.twilight.twilight.domain.bulletin.repository;
+package com.twilight.twilight.domain.bulletin.post.repository;
 
-import com.twilight.twilight.domain.bulletin.dto.Cursor;
-import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostListDto;
-import com.twilight.twilight.domain.bulletin.dto.GetFreeBoardPostReplyDto;
+import com.twilight.twilight.domain.bulletin.post.dto.Cursor;
+import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostListDto;
+import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostReplyDto;
 
 import java.util.List;
 
