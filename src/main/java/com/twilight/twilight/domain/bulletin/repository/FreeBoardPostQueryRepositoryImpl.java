@@ -44,6 +44,7 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 ))
                 .from(qFreeBoardPost)
                 .join(qFreeBoardPost.member,member)
+                .where(qFreeBoardPost.deletedAt.isNull())
                 .orderBy(qFreeBoardPost.createdAt.desc())
                 .limit(number)
                 .fetch();
@@ -222,6 +223,8 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                             )
             );
         }
+
+        where.and(qFreeBoardPost.deletedAt.isNull());
 
         return query
                 .select(Projections.constructor(GetFreeBoardPostListDto.class,

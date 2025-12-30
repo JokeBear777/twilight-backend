@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface FreeBoardPostRepository extends JpaRepository<FreeBoardPost, Long> {
     Optional<FreeBoardPost> findByFreeBoardPostId(Long postId);
+    long countByDeletedAtIsNull();
 }

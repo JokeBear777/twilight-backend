@@ -43,7 +43,7 @@ public class FreeBoardPostService {
     public long getTotalPostCount() {
         String totalCountKey = redisTemplate.opsForValue().get(TOTAL_COUNT_KEY);
         if (totalCountKey != null) return Long.parseLong(totalCountKey);
-        long count = freeBoardPostRepository.count();
+        long count = freeBoardPostRepository.countByDeletedAtIsNull();
         redisTemplate.opsForValue().set(TOTAL_COUNT_KEY, String.valueOf(count), Duration.ofMinutes(5)); // TTL 5분
         return count;
     }
@@ -146,6 +146,9 @@ public class FreeBoardPostService {
     public void editPost(Member member, Long postId, FreeBoardPostEditForm form) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        if (post.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 게시물은 수정할 수 없습니다.");
+        }
         if (!post.getMember().getMemberId().equals(member.getMemberId())) {
             throw new AccessDeniedException("본인 글만 수정할 수 있습니다.");
         }
@@ -157,12 +160,17 @@ public class FreeBoardPostService {
     public GetFreeBoardPostEditDto getEditablePost(Member member, Long postId) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        if (post.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 게시물은 수정할 수 없습니다.");
+        }
         if (!post.getMember().getMemberId().equals(member.getMemberId())) {
             throw new AccessDeniedException("본인 글만 수정할 수 있습니다.");
         }
         return GetFreeBoardPostEditDto.fromEntity(post);
     }
 
+    //Hard delete 버전
+    /**
     @Transactional
     public void deletePost(Member member, Long postId) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
@@ -177,11 +185,33 @@ public class FreeBoardPostService {
 
         freeBoardPostRepository.delete(post);
     }
+     **/
+
+    //Soft delete 버전
+    @Transactional
+    public void deletePost(Member member, Long postId) {
+        FreeBoardPost post = freeBoardPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        if (post.isDeleted()) {
+            throw new IllegalArgumentException("이미 삭제된 게시글 입니다.");
+        }
+        if (!post.getMember().getMemberId().equals(member.getMemberId())
+                || member.getRole().equals(Role.ROLE_ADMIN.toString())
+        ) {
+            throw new AccessDeniedException("본인 또는 관리자만 삭제 할 수 있습니다.");
+        }
+
+        post.softDelete();
+    }
 
     @Transactional
     public RecommendResult increasePostRecommendation(Member member, Long postId) {
         FreeBoardPost post = freeBoardPostRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
+
+        if (post.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 게시글은 추천할 수 없습니다.");
+        }
 
         if (post.getMember().getMemberId().equals(member.getMemberId())) {
             return RecommendResult.SELF_RECOMMEND;

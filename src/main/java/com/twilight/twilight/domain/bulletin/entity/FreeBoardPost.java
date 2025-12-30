@@ -58,6 +58,9 @@ public class FreeBoardPost {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     public void incrementViews() {
         this.views++;
     }
@@ -75,6 +78,14 @@ public class FreeBoardPost {
         if (this.numberOfComments < 0) {
             throw new IllegalStateException("Cannot decrease number of comments");
         }
+    }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
 }
