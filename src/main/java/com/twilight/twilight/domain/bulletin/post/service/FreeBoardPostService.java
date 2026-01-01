@@ -12,6 +12,8 @@ import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostReposi
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
+import com.twilight.twilight.global.outbox.repository.IndexingOutboxRepository;
+import com.twilight.twilight.global.outbox.service.FreeBoardSearchSyncPublisher;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,9 @@ public class FreeBoardPostService {
     private final FreeBoardPageProps pageProps;
     private final FreeBoardPostRecommendationRepository freeBoardPostRecommendationRepository;
     private final FreeBoardPostReplyRepository freeBoardPostReplyRepository;
+    private final IndexingOutboxRepository indexingOutboxRepository;
+    private final FreeBoardSearchSyncPublisher freeBoardSearchSyncPublisher;
+
 
     private static final String TOTAL_COUNT_KEY = "freeBoard:totalCount";
 
@@ -134,13 +139,15 @@ public class FreeBoardPostService {
 
     @Transactional
     public void savePost(Member member, FreeBoardPostForm form ) {
-        freeBoardPostRepository.save(
-                FreeBoardPost.builder()
-                        .member(member)
-                        .title(form.getTitle())
-                        .content(form.getContent())
-                        .build()
-        );
+        FreeBoardPost post = FreeBoardPost.builder()
+                .member(member)
+                .title(form.getTitle())
+                .content(form.getContent())
+                .build();
+
+        freeBoardPostRepository.save(post);
+
+        freeBoardSearchSyncPublisher.publishPostUpsert(post.getFreeBoardPostId());
     }
 
     @Transactional
@@ -156,6 +163,8 @@ public class FreeBoardPostService {
 
         post.setTitle(form.getTitle());
         post.setContent(form.getContent());
+
+        freeBoardSearchSyncPublisher.publishPostUpsert(post.getFreeBoardPostId());
     }
 
     public GetFreeBoardPostEditDto getEditablePost(Member member, Long postId) {
@@ -203,6 +212,8 @@ public class FreeBoardPostService {
         }
 
         post.softDelete();
+
+        freeBoardSearchSyncPublisher.publishPostDelete(post.getFreeBoardPostId());
     }
 
     @Transactional
