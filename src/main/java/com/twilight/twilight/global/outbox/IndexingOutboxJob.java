@@ -33,7 +33,11 @@ public class IndexingOutboxJob {
     }
 
     private int calculateNextRetry(int retryCount) {
-
-        return -1;
+        return switch (retryCount) {
+            case 0 -> 5;
+            case 1 -> 30;
+            case 2 -> 300;
+            default -> 1800;
+        };
     }
 }
