@@ -300,4 +300,11 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .fetch();
     }
 
+    @Override
+    public List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size) {
+
+
+        return List.of();
+    }
+
 }

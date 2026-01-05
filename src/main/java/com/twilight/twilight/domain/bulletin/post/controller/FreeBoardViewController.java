@@ -2,6 +2,7 @@ package com.twilight.twilight.domain.bulletin.post.controller;
 
 import com.twilight.twilight.domain.bulletin.post.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.post.dto.*;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
@@ -221,5 +222,15 @@ public class FreeBoardViewController {
         model.addAttribute("memberId", userDetails.getMember().getMemberId());
 
         return "bulletin/free-board-post-detail :: replies";
+    }
+
+    //검색
+    @GetMapping("/search")
+    public String search(
+            @RequestParam String q,
+            Model model
+    ) {
+        model.addAttribute("keyword", q);
+        return "bulletin/free-board-search";
     }
 }

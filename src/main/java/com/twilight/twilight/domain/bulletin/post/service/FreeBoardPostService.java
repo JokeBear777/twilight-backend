@@ -376,6 +376,24 @@ public class FreeBoardPostService {
         );
     }
 
+    public List<GetFreeBoardPostListDto> getSearchPostsByCursor(PageCursorRequest pageCursorRequest, String keyword) {
+        Cursor requestCursor = pageCursorRequest.toCursor();
+        int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
+        int threshold = 0;
+
+        List<String> ngrams = generateNgramsByKeyword(keyword);
+
+        return freeBoardPostQueryRepository.findSearchPostsByCursor(
+                ngrams,
+                threshold,
+                requestCursor,
+                pageSizeOrDefault
+        );
+    }
+
+    private List<String> generateNgramsByKeyword(String keyword) {
+        return List.of();
+    }
 
 
 

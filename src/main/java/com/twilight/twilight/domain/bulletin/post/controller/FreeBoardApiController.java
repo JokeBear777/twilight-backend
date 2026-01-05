@@ -58,4 +58,15 @@ public class FreeBoardApiController {
         return freeBoardPostService.getReplyCursorResponse(replyLists, pageSize);
     }
 
+    @GetMapping("/search/{key-word}")
+    public CursorResponse<GetFreeBoardPostListDto> getFreeBoardSearchPosts(
+            PageCursorRequest pageRequest,
+            @PathVariable("key-word") String keyWord
+    ) {
+        int pageSize = pageRequest.pageSizeOrDefault();
+        List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getSearchPostsByCursor(pageRequest, keyWord);
+
+        return freeBoardPostService.getCursorResponse(postLists, pageSize);
+    }
+
 }
