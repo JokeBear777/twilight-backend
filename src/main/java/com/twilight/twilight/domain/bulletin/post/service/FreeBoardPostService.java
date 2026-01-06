@@ -5,15 +5,14 @@ import com.twilight.twilight.domain.bulletin.post.dto.*;
 import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostRecommendation;
 import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostReply;
-import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostQueryRepository;
-import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostRecommendationRepository;
-import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostReplyRepository;
-import com.twilight.twilight.domain.bulletin.post.repository.FreeBoardPostRepository;
+import com.twilight.twilight.domain.bulletin.post.repository.*;
 import com.twilight.twilight.domain.member.entity.Member;
 import com.twilight.twilight.domain.member.type.Role;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
 import com.twilight.twilight.global.outbox.repository.IndexingOutboxRepository;
 import com.twilight.twilight.global.outbox.service.FreeBoardSearchSyncPublisher;
+import com.twilight.twilight.global.policy.ThresholdGenerator;
+import com.twilight.twilight.global.search.NgramGenerator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +41,9 @@ public class FreeBoardPostService {
     private final FreeBoardPostReplyRepository freeBoardPostReplyRepository;
     private final IndexingOutboxRepository indexingOutboxRepository;
     private final FreeBoardSearchSyncPublisher freeBoardSearchSyncPublisher;
+    private final ThresholdGenerator thresholdGenerator;
+    private final NgramGenerator ngramGenerator;
+    private final FreeBoardSearchRepository freeBoardSearchRepository;
 
 
     private static final String TOTAL_COUNT_KEY = "freeBoard:totalCount";
@@ -379,11 +381,11 @@ public class FreeBoardPostService {
     public List<GetFreeBoardPostListDto> getSearchPostsByCursor(PageCursorRequest pageCursorRequest, String keyword) {
         Cursor requestCursor = pageCursorRequest.toCursor();
         int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
-        int threshold = 0;
+        List<String> ngrams = ngramGenerator.generateByKeyword(keyword);
+        int threshold = thresholdGenerator.searchThresholdGenerator(ngrams.size());
 
-        List<String> ngrams = generateNgramsByKeyword(keyword);
 
-        return freeBoardPostQueryRepository.findSearchPostsByCursor(
+        return freeBoardSearchRepository.findSearchPostsByCursor(
                 ngrams,
                 threshold,
                 requestCursor,
@@ -391,9 +393,6 @@ public class FreeBoardPostService {
         );
     }
 
-    private List<String> generateNgramsByKeyword(String keyword) {
-        return List.of();
-    }
 
 
 

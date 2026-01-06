@@ -299,12 +299,4 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .limit(size + 1) // hasMore 판단용
                 .fetch();
     }
-
-    @Override
-    public List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size) {
-
-
-        return List.of();
-    }
-
 }

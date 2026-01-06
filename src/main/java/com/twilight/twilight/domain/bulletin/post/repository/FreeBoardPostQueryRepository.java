@@ -16,5 +16,4 @@ public interface FreeBoardPostQueryRepository {
     List<GetFreeBoardPostReplyDto> findParentRepliesOrderByCreatedAtAsc(Long postId, Long page, int size);
     List<GetFreeBoardPostListDto> findPostsByCursor(Cursor cursor, int size);
     List<GetFreeBoardPostReplyDto> findChildReplyByCursor(Cursor cursor, int size, Long postId, Long parentId);
-    List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size);
 }

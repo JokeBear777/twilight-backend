@@ -226,8 +226,8 @@ public class FreeBoardViewController {
 
     //검색
     @GetMapping("/search")
-    public String search(
-            @RequestParam String q,
+    public String searchPage(
+            @RequestParam(required = false) String q,
             Model model
     ) {
         model.addAttribute("keyword", q);

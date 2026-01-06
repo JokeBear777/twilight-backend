@@ -2,6 +2,8 @@ package com.twilight.twilight.domain.bulletin.post.controller;
 
 import com.twilight.twilight.domain.bulletin.post.dto.*;
 import com.twilight.twilight.domain.bulletin.post.service.FreeBoardPostService;
+import com.twilight.twilight.global.search.NgramGenerator;
+import com.twilight.twilight.global.search.NgramIndex;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,7 @@ import java.util.List;
 public class FreeBoardApiController {
 
     private final FreeBoardPostService freeBoardPostService;
+    private final NgramGenerator ngramGenerator;
 
     /*
     @GetMapping("{post-id}")
@@ -63,6 +66,7 @@ public class FreeBoardApiController {
             PageCursorRequest pageRequest,
             @PathVariable("key-word") String keyWord
     ) {
+        List<String> ngrams = ngramGenerator.generateByKeyword(keyWord);
         int pageSize = pageRequest.pageSizeOrDefault();
         List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getSearchPostsByCursor(pageRequest, keyWord);
 
