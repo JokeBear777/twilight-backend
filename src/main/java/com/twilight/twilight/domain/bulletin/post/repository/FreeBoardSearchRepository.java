@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface FreeBoardSearchRepository {
     List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size);
+    List<GetFreeBoardPostListDto> findFirstSearchPosts (List<String> ngrams, int threshold, int size);
 }

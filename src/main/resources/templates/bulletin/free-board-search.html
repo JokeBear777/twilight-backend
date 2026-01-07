@@ -109,8 +109,9 @@
         }
     </style>
 
-    <script>
+    <script th:inline="javascript">
         const keyword = /*[[${keyword}]]*/ "";
+        console.log("🔥 search page script loaded");
 
         document.addEventListener("DOMContentLoaded", () => {
 
@@ -143,7 +144,8 @@
             let lastCreatedAt = null;
 
             async function loadMore() {
-                if (isLoading || !hasNext || !keyword) return;
+                console.log("🔥 loadMore called");
+                if (isLoading || !hasNext) return;
                 isLoading = true;
 
                 let url = `/api/v1/bulletin/free-board/search?q=${encodeURIComponent(keyword)}&pageSize=10`;
@@ -243,8 +245,9 @@
         <!-- ===== LIST ===== -->
         <div class="card-body-center">
             <div class="scroll-area">
-                <div id="post-list"></div>
-                <div id="scroll-sentinel" style="height:1px;"></div>
+                <div id="post-list">
+                    <div id="scroll-sentinel" style="height:1px;"></div>
+                </div>
             </div>
         </div>
 

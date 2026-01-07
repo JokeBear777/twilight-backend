@@ -384,12 +384,21 @@ public class FreeBoardPostService {
         List<String> ngrams = ngramGenerator.generateByKeyword(keyword);
         int threshold = thresholdGenerator.searchThresholdGenerator(ngrams.size());
 
+        if (requestCursor == null) {
+            //첫페이지
+            return freeBoardSearchRepository.findFirstSearchPosts(
+                    ngrams,
+                    threshold,
+                    pageSizeOrDefault + 1
+            );
+
+        }
 
         return freeBoardSearchRepository.findSearchPostsByCursor(
                 ngrams,
                 threshold,
                 requestCursor,
-                pageSizeOrDefault
+                pageSizeOrDefault + 1
         );
     }
 

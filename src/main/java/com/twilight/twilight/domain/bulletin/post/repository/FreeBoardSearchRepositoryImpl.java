@@ -16,15 +16,61 @@ public class FreeBoardSearchRepositoryImpl implements FreeBoardSearchRepository 
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
+    public List<GetFreeBoardPostListDto> findFirstSearchPosts (List<String> ngrams, int threshold, int size) {
+        if (ngrams.isEmpty()) {
+            return List.of();
+        }
 
-    public List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size) {
         String sql = """
         SELECT
             p.free_board_post_id,
             m.member_id,
             p.title,
             p.content,
-            m.member_name,
+            m.member_name AS name,
+            p.views,
+            p.number_of_recommendations,
+            p.number_of_comments,
+            p.created_at
+        FROM free_board_post p
+        JOIN (
+            SELECT ni.post_id
+            FROM free_board_ngram_posting ni
+            WHERE ni.ngram IN (:ngrams)
+            GROUP BY ni.post_id
+            HAVING COUNT(*) >= :threshold
+        ) s ON s.post_id = p.free_board_post_id
+        JOIN member_info m ON m.member_id = p.member_id
+        ORDER BY
+            p.created_at DESC,
+            p.free_board_post_id DESC
+        LIMIT :limit
+        """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("ngrams", ngrams)
+                .addValue("threshold", threshold)
+                .addValue("limit", size );
+
+        return namedParameterJdbcTemplate.query(
+                sql,
+                params,
+                rowMapper()
+        );
+    }
+
+    public List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size) {
+        if (ngrams.isEmpty()) {
+            return List.of();
+        }
+
+        String sql = """
+        SELECT
+            p.free_board_post_id,
+            m.member_id,
+            p.title,
+            p.content,
+            m.member_name AS name,
             p.views,
             p.number_of_recommendations,
             p.number_of_comments,

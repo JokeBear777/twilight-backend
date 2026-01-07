@@ -61,14 +61,14 @@ public class FreeBoardApiController {
         return freeBoardPostService.getReplyCursorResponse(replyLists, pageSize);
     }
 
-    @GetMapping("/search/{key-word}")
+    @GetMapping("/search")
     public CursorResponse<GetFreeBoardPostListDto> getFreeBoardSearchPosts(
             PageCursorRequest pageRequest,
-            @PathVariable("key-word") String keyWord
+            @RequestParam String q
     ) {
-        List<String> ngrams = ngramGenerator.generateByKeyword(keyWord);
+        List<String> ngrams = ngramGenerator.generateByKeyword(q);
         int pageSize = pageRequest.pageSizeOrDefault();
-        List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getSearchPostsByCursor(pageRequest, keyWord);
+        List<GetFreeBoardPostListDto> postLists = freeBoardPostService.getSearchPostsByCursor(pageRequest, q);
 
         return freeBoardPostService.getCursorResponse(postLists, pageSize);
     }

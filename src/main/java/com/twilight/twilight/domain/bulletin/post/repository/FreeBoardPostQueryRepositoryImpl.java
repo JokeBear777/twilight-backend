@@ -245,7 +245,7 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                         qFreeBoardPost.createdAt.desc(),
                         qFreeBoardPost.freeBoardPostId.desc()
                 )
-                .limit(size + 1)
+                .limit(size)
                 .fetch();
     }
 
