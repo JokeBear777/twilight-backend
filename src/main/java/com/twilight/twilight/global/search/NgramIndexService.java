@@ -19,7 +19,7 @@ public class NgramIndexService {
     public void reindexFreeBoardPost(FreeBoardPost post) {
         deleteByPostId(post.getFreeBoardPostId());
 
-        List<NgramIndex> ngramIndexList = ngramGenerator.generate(
+        List<NgramIndex> ngramIndexList = ngramGenerator.generateByPost(
                 post.getTitle(),
                 post.getContent(),
                 post.getFreeBoardPostId()

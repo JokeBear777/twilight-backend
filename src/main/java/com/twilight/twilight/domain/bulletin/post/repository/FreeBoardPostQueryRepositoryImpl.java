@@ -245,7 +245,7 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                         qFreeBoardPost.createdAt.desc(),
                         qFreeBoardPost.freeBoardPostId.desc()
                 )
-                .limit(size + 1)
+                .limit(size)
                 .fetch();
     }
 
@@ -299,5 +299,4 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .limit(size + 1) // hasMore 판단용
                 .fetch();
     }
-
 }

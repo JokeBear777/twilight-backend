@@ -1,14 +1,11 @@
 package com.twilight.twilight.domain.bulletin.post.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GetFreeBoardPostListDto {
 
     private Long freeBoardPostId;
@@ -28,5 +25,27 @@ public class GetFreeBoardPostListDto {
     private int numberOfComments;
 
     private LocalDateTime createdAt;
+
+    public GetFreeBoardPostListDto(
+            Long freeBoardPostId,
+            Long memberId,
+            String title,
+            String content,
+            String name,
+            int views,
+            int numberOfRecommendations,
+            int numberOfComments,
+            LocalDateTime createdAt
+    ) {
+        this.freeBoardPostId = freeBoardPostId;
+        this.memberId = memberId;
+        this.title = title;
+        this.content = content;
+        this.name = name;
+        this.views = views;
+        this.numberOfRecommendations = numberOfRecommendations;
+        this.numberOfComments = numberOfComments;
+        this.createdAt = createdAt;
+    }
 
 }

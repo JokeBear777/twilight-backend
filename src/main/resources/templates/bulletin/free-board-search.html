@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>게시판 검색</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        @font-face {
+            font-family: 'CookieRun-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
+        }
+
+        body {
+            font-family: 'CookieRun-Regular', sans-serif;
+            background: #e6dcd0;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card-main-container {
+            width: 375px;
+            height: 650px;
+            background-color: #fffaf6;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: 2px solid #d6ccc2;
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .card-header {
+            padding: 0.8rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            background: transparent;
+        }
+
+        .card-header input {
+            border-radius: 1rem;
+            font-size: .9rem;
+        }
+
+        /* ===== LIST ===== */
+        .card-body-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .notice-item {
+            position: relative;
+            padding: .8rem 1rem;
+            background: #fffaf6;
+        }
+
+        .notice-item::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,.15);
+        }
+
+        .post-top {
+            display: flex;
+            gap: .4rem;
+        }
+
+        .comment-count {
+            font-weight: bold;
+            color: #8b5e34;
+        }
+
+        .post-title {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #3e2f20;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .post-bottom {
+            font-size: .8rem;
+            color: #8a7a6a;
+            margin-left: 1.6rem;
+        }
+
+        .separator {
+            margin: 0 .3rem;
+            color: #c2b6a3;
+        }
+    </style>
+
+    <script th:inline="javascript">
+        const keyword = /*[[${keyword}]]*/ "";
+        console.log("🔥 search page script loaded");
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+            /* ===== 검색 submit 최소 전처리 ===== */
+            const form = document.getElementById("searchForm");
+            const input = document.getElementById("searchInput");
+
+            form.addEventListener("submit", e => {
+                const normalized = input.value
+                    .trim()
+                    .replace(/\s+/g, " ")
+                    .replace(/[^가-힣a-zA-Z0-9 _-]/g, "");
+
+                if (!normalized) {
+                    e.preventDefault();
+                    return;
+                }
+
+                input.value = normalized;
+            });
+
+            /* ===== 무한 스크롤 ===== */
+            const postList = document.getElementById("post-list");
+            const sentinel = document.getElementById("scroll-sentinel");
+            const scrollRoot = document.querySelector(".scroll-area");
+
+            let isLoading = false;
+            let hasNext = true;
+            let lastId = null;
+            let lastCreatedAt = null;
+
+            async function loadMore() {
+                console.log("🔥 loadMore called");
+                if (isLoading || !hasNext) return;
+                isLoading = true;
+
+                let url = `/api/v1/bulletin/free-board/search?q=${encodeURIComponent(keyword)}&pageSize=10`;
+                if (lastId && lastCreatedAt) {
+                    url += `&lastId=${lastId}&lastCreatedAt=${encodeURIComponent(lastCreatedAt)}`;
+                }
+
+                try {
+                    const res = await fetch(url);
+                    const result = await res.json();
+
+                    result.data.forEach(post => {
+                        postList.insertBefore(createPost(post), sentinel);
+                    });
+
+                    hasNext = result.hasNext;
+                    lastId = result.nextCursor?.lastId ?? null;
+                    lastCreatedAt = result.nextCursor?.lastCreatedAt ?? null;
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    isLoading = false;
+                }
+            }
+
+            function createPost(post) {
+                const div = document.createElement("div");
+                div.className = "notice-item";
+                div.innerHTML = `
+                    <div class="post-top">
+                        <span class="comment-count">${post.numberOfComments ?? 0}</span>
+                        <a class="post-title" href="/bulletin/free-board/${post.freeBoardPostId}">
+                            ${escapeHtml(post.title ?? "")}
+                        </a>
+                    </div>
+                    <div class="post-bottom">
+                        <span>${formatDate(post.createdAt)}</span>
+                        <span class="separator">|</span>
+                        <span>${escapeHtml(post.name ?? "")}</span>
+                        <span class="separator">|</span>
+                        <span>조회 ${post.views ?? 0}</span>
+                        <span class="separator">|</span>
+                        <span>추천 ${post.numberOfRecommendations ?? 0}</span>
+                    </div>
+                `;
+                return div;
+            }
+
+            function formatDate(iso) {
+                return new Date(iso).toLocaleString("ko-KR", {
+                    month:"2-digit", day:"2-digit",
+                    hour:"2-digit", minute:"2-digit"
+                });
+            }
+
+            function escapeHtml(str) {
+                return String(str)
+                    .replaceAll("&","&amp;")
+                    .replaceAll("<","&lt;")
+                    .replaceAll(">","&gt;");
+            }
+
+            const observer = new IntersectionObserver(entries => {
+                if (entries[0].isIntersecting) loadMore();
+            }, { root: scrollRoot, rootMargin: "200px" });
+
+            observer.observe(sentinel);
+            loadMore();
+        });
+    </script>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height:100vh;">
+    <div class="card-main-container">
+
+        <!-- ===== HEADER ===== -->
+        <div class="card-header">
+            <button class="btn btn-link p-0"
+                    style="color:#5e4633;font-size:1.2rem;"
+                    onclick="history.back()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+
+            <form id="searchForm"
+                  method="get"
+                  action="/bulletin/free-board/search"
+                  class="flex-grow-1">
+                <input id="searchInput"
+                       name="q"
+                       class="form-control form-control-sm"
+                       placeholder="검색어를 입력하세요"
+                       th:value="${keyword}">
+            </form>
+        </div>
+
+        <!-- ===== LIST ===== -->
+        <div class="card-body-center">
+            <div class="scroll-area">
+                <div id="post-list">
+                    <div id="scroll-sentinel" style="height:1px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+</body>
+</html>
