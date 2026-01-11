@@ -1,4 +1,7 @@
 package com.twilight.twilight.domain.image.type;
 
-public class ImageStatus {
+public enum ImageStatus {
+    PENDING,
+    UPLOADED,
+    DELETED,
 }
