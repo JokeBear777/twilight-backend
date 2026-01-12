@@ -5,12 +5,11 @@ import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RequestUploadUrlForm {
+public class UploadUrlRequestForm {
     @NotBlank
     private String fileName;
 

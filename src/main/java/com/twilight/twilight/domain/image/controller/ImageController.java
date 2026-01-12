@@ -1,8 +1,8 @@
 package com.twilight.twilight.domain.image.controller;
 
-import com.twilight.twilight.domain.bulletin.post.dto.FreeBoardPostEditForm;
 import com.twilight.twilight.domain.image.dto.PresignedUploadUrlResponse;
-import com.twilight.twilight.domain.image.dto.RequestUploadUrlForm;
+import com.twilight.twilight.domain.image.dto.UploadCompleteRequestForm;
+import com.twilight.twilight.domain.image.dto.UploadUrlRequestForm;
 import com.twilight.twilight.domain.image.service.ImageUploadService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import com.twilight.twilight.global.storage.PresignedUploadUrl;
@@ -20,32 +20,40 @@ public class ImageController {
     private final ImageUploadService imageUploadService;
 
     //이미지 url 요청 http
-    @PostMapping("upload-url")
+    @PostMapping("/url")
     public ResponseEntity<PresignedUploadUrlResponse> getUrl(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @ModelAttribute RequestUploadUrlForm form
+            @ModelAttribute UploadUrlRequestForm form
     ) {
         PresignedUploadUrl presignedUrl =
                 imageUploadService.getUrl(form, userDetails.getMember().getMemberId());
-
 
         return ResponseEntity.ok(
                 PresignedUploadUrlResponse.from(presignedUrl)
         );
     }
 
+    @PostMapping("/upload-complete")
+    public ResponseEntity<Void> postUrl(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody UploadCompleteRequestForm form
+    ) {
+        imageUploadService.uploadComplete(
+                form,
+                userDetails.getMember().getMemberId()
+        );
 
-    //이미지 url 업로드 완료 http
-    @PostMapping("/url/")
-    public ResponseEntity<?> postUrl() {
-        return null;
+        return ResponseEntity.ok().build();
     }
 
 
-    //이미지 url 삭제 http
-    @DeleteMapping("/url")
-    public ResponseEntity<?> deleteUrl() {
-        return null;
+    @DeleteMapping("/{image-id}")
+    public ResponseEntity<Void> deleteImage(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("image-id") Long imageId
+    ) {
+        imageUploadService.deleteImage(imageId, userDetails.getMember().getMemberId());
+        return ResponseEntity.ok().build();
     }
 
 }

@@ -1,32 +1,43 @@
 package com.twilight.twilight.domain.image.service;
 
-import com.twilight.twilight.domain.image.dto.RequestUploadUrlForm;
+import com.twilight.twilight.domain.image.dto.UploadCompleteRequestForm;
+import com.twilight.twilight.domain.image.dto.UploadUrlRequestForm;
+import com.twilight.twilight.domain.image.repository.ImageRepository;
+import com.twilight.twilight.domain.image.type.Image;
+import com.twilight.twilight.domain.image.type.ImageStatus;
 import com.twilight.twilight.global.policy.ObjectKeyGenerator;
 import com.twilight.twilight.global.storage.ObjectStorage;
 import com.twilight.twilight.global.storage.PresignedUploadUrl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ImageUploadService {
 
     private final ObjectKeyGenerator objectKeyGenerator;
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB, 환경변수로 수정필요
     private final ObjectStorage objectStorage;
+    private final ImageRepository imageRepository;
 
-    public PresignedUploadUrl getUrl(RequestUploadUrlForm form, Long userId) {
-        validateRequestUploadUrlForm(form, userId);
-
+    @Transactional
+    public PresignedUploadUrl getUrl(UploadUrlRequestForm form, Long userId) {
+        validateRequestUploadUrlForm(form);
+        String objectKey = objectKeyGenerator.generateObject(userId, form.getFileName());
+        imageRepository.save(
+                Image.createPending(userId, objectKey)
+        );
 
         return objectStorage.generatePresignedUploadUrl(
-                objectKeyGenerator.generateObject(userId, form.getFileName()),
+                objectKey,
                 form.getContentLength(),
                 form.getContentType()
                 );
     }
 
-    private void validateRequestUploadUrlForm(RequestUploadUrlForm form, Long userId) {
+    private void validateRequestUploadUrlForm(UploadUrlRequestForm form) {
         if (form.getFileName() == null || form.getFileName().isBlank()) {
             throw new IllegalArgumentException("파일 이름 필요");
         }
@@ -41,5 +52,33 @@ public class ImageUploadService {
             throw new IllegalArgumentException("파일 크기 초과");
         }
     }
+
+    @Transactional
+    public void uploadComplete(UploadCompleteRequestForm form, Long userId) {
+        if (form.getObjectKey() == null || form.getObjectKey().isBlank()) {
+            throw new IllegalArgumentException("ObjectKey 필요");
+        }
+
+        Image image = imageRepository.findByObjectKey(form.getObjectKey())
+                .orElseThrow(() -> new IllegalArgumentException("이미지 없음, Object Key: " + form.getObjectKey()));
+
+        if (!image.getOwnerId().equals(userId)) {
+            throw new SecurityException("권한 없음");
+        }
+
+        image.markUploaded();
+    }
+
+    @Transactional
+    public void deleteImage(Long imageId, Long userId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("이미지 없음, Image Id: " + imageId));
+        if (image.getOwnerId().equals(userId)) {
+            throw new SecurityException("권한 없음");
+        }
+
+        image.markDeleted();
+    }
+
 
 }
