@@ -1,5 +1,6 @@
 package com.twilight.twilight.domain.image.service;
 
+import com.twilight.twilight.domain.image.dto.PresignedUploadUrlResponse;
 import com.twilight.twilight.domain.image.dto.UploadCompleteRequestForm;
 import com.twilight.twilight.domain.image.dto.UploadUrlRequestForm;
 import com.twilight.twilight.domain.image.repository.ImageRepository;
@@ -23,18 +24,21 @@ public class ImageUploadService {
     private final ImageRepository imageRepository;
 
     @Transactional
-    public PresignedUploadUrl getUrl(UploadUrlRequestForm form, Long userId) {
+    public PresignedUploadUrlResponse getUrl(UploadUrlRequestForm form, Long userId) {
         validateRequestUploadUrlForm(form);
         String objectKey = objectKeyGenerator.generateObject(userId, form.getFileName());
-        imageRepository.save(
+        Image image = imageRepository.save(
                 Image.createPending(userId, objectKey)
         );
 
-        return objectStorage.generatePresignedUploadUrl(
-                objectKey,
-                form.getContentLength(),
-                form.getContentType()
-                );
+        return PresignedUploadUrlResponse.from(
+                image.getId(),
+                objectStorage.generatePresignedUploadUrl(
+                        objectKey,
+                        form.getContentLength(),
+                        form.getContentType()
+                )
+        );
     }
 
     private void validateRequestUploadUrlForm(UploadUrlRequestForm form) {
