@@ -145,12 +145,17 @@
         console.log("mock upload skipped:", file.name);
 
         // 2️⃣ upload-complete
-        await fetch("/api/v1/images/upload-complete", {
+        const response = await fetch("/api/v1/images/upload-complete", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             credentials: "same-origin",
-            body: JSON.stringify({imageId: presigned.imageId})
+            body: JSON.stringify({objectKey: presigned.objectKey})
         });
+
+        if (!response.ok) {
+            alert("이미지 업로드 실패");
+            return;
+        }
 
         // 3️⃣ 실제 content에는 <img> 저장
         realContent += `\n<img src="/api/v1/images/${presigned.imageId}" />\n`;

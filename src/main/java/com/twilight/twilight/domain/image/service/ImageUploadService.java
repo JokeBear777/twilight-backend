@@ -10,6 +10,7 @@ import com.twilight.twilight.global.policy.ObjectKeyGenerator;
 import com.twilight.twilight.global.storage.ObjectStorage;
 import com.twilight.twilight.global.storage.PresignedUploadUrl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,6 +84,17 @@ public class ImageUploadService {
 
         image.markDeleted();
     }
+
+    public Resource getImage(Long imageId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("이미지 없음, Image Id: " + imageId));
+        if (image.getStatus() != ImageStatus.UPLOADED) {
+            throw new IllegalStateException("이미지 업로드 미완료");
+        }
+
+        return objectStorage.load(image.getObjectKey());
+    }
+
 
 
 }

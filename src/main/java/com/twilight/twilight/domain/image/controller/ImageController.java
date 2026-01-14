@@ -5,8 +5,8 @@ import com.twilight.twilight.domain.image.dto.UploadCompleteRequestForm;
 import com.twilight.twilight.domain.image.dto.UploadUrlRequestForm;
 import com.twilight.twilight.domain.image.service.ImageUploadService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
-import com.twilight.twilight.global.storage.PresignedUploadUrl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -61,6 +61,17 @@ public class ImageController {
     ) {
         imageUploadService.deleteImage(imageId, userDetails.getMember().getMemberId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{imageId}")
+    public ResponseEntity<Resource> getImage(
+            @PathVariable Long imageId
+    ) {
+        Resource resource = imageUploadService.getImage(imageId);
+
+        return ResponseEntity.ok()
+                //.contentType(MediaType.IMAGE_PNG) // or IMAGE_PNG
+                .body(resource);
     }
 
 }
