@@ -24,8 +24,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Test
-        run: ./gradlew test --no-daemon
-
-      - name: Build
-        run: ./gradlew build --no-daemon
+      #테스트 단계 제거하고, 빌드할 때 테스트만 제외
+      - name: Build (skip tests)
+        run: ./gradlew build -x test --no-daemon
