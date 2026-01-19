@@ -1,5 +1,6 @@
 package com.twilight.twilight.domain.image.service;
 
+import com.twilight.twilight.domain.image.dto.PresignedUploadUrlResponse;
 import com.twilight.twilight.domain.image.dto.UploadCompleteRequestForm;
 import com.twilight.twilight.domain.image.dto.UploadUrlRequestForm;
 import com.twilight.twilight.domain.image.repository.ImageRepository;
@@ -9,6 +10,7 @@ import com.twilight.twilight.global.policy.ObjectKeyGenerator;
 import com.twilight.twilight.global.storage.ObjectStorage;
 import com.twilight.twilight.global.storage.PresignedUploadUrl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +25,21 @@ public class ImageUploadService {
     private final ImageRepository imageRepository;
 
     @Transactional
-    public PresignedUploadUrl getUrl(UploadUrlRequestForm form, Long userId) {
+    public PresignedUploadUrlResponse getUrl(UploadUrlRequestForm form, Long userId) {
         validateRequestUploadUrlForm(form);
         String objectKey = objectKeyGenerator.generateObject(userId, form.getFileName());
-        imageRepository.save(
+        Image image = imageRepository.save(
                 Image.createPending(userId, objectKey)
         );
 
-        return objectStorage.generatePresignedUploadUrl(
-                objectKey,
-                form.getContentLength(),
-                form.getContentType()
-                );
+        return PresignedUploadUrlResponse.from(
+                image.getId(),
+                objectStorage.generatePresignedUploadUrl(
+                        objectKey,
+                        form.getContentLength(),
+                        form.getContentType()
+                )
+        );
     }
 
     private void validateRequestUploadUrlForm(UploadUrlRequestForm form) {
@@ -79,6 +84,17 @@ public class ImageUploadService {
 
         image.markDeleted();
     }
+
+    public Resource getImage(Long imageId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("이미지 없음, Image Id: " + imageId));
+        if (image.getStatus() != ImageStatus.UPLOADED) {
+            throw new IllegalStateException("이미지 업로드 미완료");
+        }
+
+        return objectStorage.load(image.getObjectKey());
+    }
+
 
 
 }
