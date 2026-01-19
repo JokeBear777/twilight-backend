@@ -104,13 +104,45 @@
 </section>
 
 <!-- ================= JS ================= -->
-
 <script>
-    // 🔹 실제 서버로 보낼 HTML content
-    let realContent = "";
-
-    // 🔹 이미지 번호
+    // ✅ [이미지N] -> imageId 매핑 저장
+    const imageMap = new Map();
     let imageCount = 0;
+
+    /**
+     * ✅ textarea 커서 위치에 텍스트 삽입
+     */
+    function insertAtCursor(textarea, text) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+
+        textarea.value = before + text + after;
+
+        const newPos = start + text.length;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        textarea.focus();
+    }
+
+    /**
+     * ✅ textarea에 있는 내용을 "서버 저장용 HTML"로 변환
+     * 1) 줄바꿈 -> <br>
+     * 2) [이미지N] -> <img src="...">
+     */
+    function buildRealHtmlContent(textareaValue) {
+        let html = textareaValue.replaceAll("\n", "<br>");
+
+        for (const [n, imageId] of imageMap.entries()) {
+            html = html.replaceAll(
+                `[이미지${n}]`,
+                `<img src="/api/v1/images/${imageId}" />`
+            );
+        }
+
+        return html;
+    }
 
     // ================= 이미지 업로드 =================
     document.getElementById("uploadImageBtn").addEventListener("click", async () => {
@@ -157,13 +189,16 @@
             return;
         }
 
-        // 3️⃣ 실제 content에는 <img> 저장
-        realContent += `\n<img src="/api/v1/images/${presigned.imageId}" />\n`;
-
-        // 4️⃣ textarea에는 [이미지N]만 표시
+        // ✅ 3️⃣ 이미지 번호 증가 + 매핑 저장
         imageCount++;
+        imageMap.set(imageCount, presigned.imageId);
+
+        // ✅ 4️⃣ textarea에는 UI용 placeholder 삽입 (커서 위치)
         const textarea = document.getElementById("contentEditor");
-        textarea.value += `\n[이미지${imageCount}]\n`;
+        insertAtCursor(textarea, `\n[이미지${imageCount}]\n`);
+
+        // 파일 선택 초기화
+        fileInput.value = "";
 
         alert("이미지 업로드 완료");
     });
@@ -172,9 +207,8 @@
     document.getElementById("writeForm").addEventListener("submit", () => {
         const textarea = document.getElementById("contentEditor");
 
-        // textarea에 보이던 값은 버리고
-        // 실제 HTML content를 서버로 전송
-        textarea.value = realContent;
+        // ✅ textarea 내용을 HTML로 변환해서 서버로 전송
+        textarea.value = buildRealHtmlContent(textarea.value);
     });
 </script>
 

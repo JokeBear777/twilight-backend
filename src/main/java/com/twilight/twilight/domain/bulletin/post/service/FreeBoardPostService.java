@@ -13,6 +13,8 @@ import com.twilight.twilight.global.outbox.repository.IndexingOutboxRepository;
 import com.twilight.twilight.global.outbox.service.FreeBoardSearchSyncPublisher;
 import com.twilight.twilight.global.policy.ThresholdGenerator;
 import com.twilight.twilight.global.search.NgramGenerator;
+import com.twilight.twilight.global.util.ContentNormalizer;
+import com.twilight.twilight.global.util.HtmlSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -141,10 +143,13 @@ public class FreeBoardPostService {
 
     @Transactional
     public void savePost(Member member, FreeBoardPostForm form ) {
+        log.info("테스트 : = {}",form.getContent());
         FreeBoardPost post = FreeBoardPost.builder()
                 .member(member)
                 .title(form.getTitle())
-                .content(form.getContent())
+                .content(
+                        contentPreprocessing(form.getContent())
+                )
                 .build();
 
         freeBoardPostRepository.save(post);
@@ -164,7 +169,9 @@ public class FreeBoardPostService {
         }
 
         post.setTitle(form.getTitle());
-        post.setContent(form.getContent());
+        post.setContent(
+                contentPreprocessing(form.getContent())
+        );
 
         freeBoardSearchSyncPublisher.publishPostUpsert(post.getFreeBoardPostId());
     }
@@ -402,7 +409,14 @@ public class FreeBoardPostService {
         );
     }
 
-
+    private String contentPreprocessing(String rawContent) {
+        log.info("RAW = {}", rawContent);
+        String normalizedContent = ContentNormalizer.normalizeContent(rawContent);
+        log.info("NORMALIZED = {}", normalizedContent );
+        String sanitizedContent =  HtmlSanitizer.sanitize(normalizedContent);
+        log.info("SANITIZED = {}", sanitizedContent);
+        return sanitizedContent;
+    }
 
 
 }
