@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
-        /* 너 작성폼 스타일 그대로 */
         @font-face {
             font-family: 'CookieRun-Regular';
             src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
@@ -33,7 +32,9 @@
             margin: 2rem auto;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
             border: 2px solid #d6ccc2;
-            overflow: visible;
+
+            /* ✅ 카드 안에서만 보여주기 (깨짐 방지 핵심) */
+            overflow: hidden;
         }
 
         .card-header {
@@ -42,6 +43,7 @@
             font-size: 1.2rem;
             font-weight: bold;
             color: #5e4633;
+            flex-shrink: 0;
         }
 
         .card-body-center {
@@ -52,6 +54,9 @@
             align-items: stretch;
             padding: 0;
             text-align: left;
+
+            /* ✅ 본문이 길면 스크롤 */
+            overflow-y: auto;
         }
 
         .footer-nav {
@@ -61,6 +66,7 @@
             padding-bottom: 0.5rem;
             border-bottom-left-radius: 1.5rem;
             border-bottom-right-radius: 1.5rem;
+            flex-shrink: 0;
         }
 
         .footer-nav .btn-dark {
@@ -82,6 +88,12 @@
         .footer-nav .btn-dark small {
             font-size: 0.75rem;
         }
+
+        /* ✅ textarea가 너무 커져서 UI 깨지는걸 방지 */
+        #content {
+            resize: none;
+            height: 180px; /* 여기 숫자만 취향대로 조절 가능 */
+        }
     </style>
 </head>
 
@@ -94,7 +106,6 @@
 
         <!-- 본문 -->
         <div class="card-body-center p-3">
-            <!-- ✅ 수정용 action URL로 변경 -->
             <form th:action="@{|/bulletin/free-board/${post.postId}|}"
                   method="post"
                   id="editForm"
@@ -104,7 +115,6 @@
                 <div>
                     <label for="title" style="font-weight:600; color:#5e4633; margin-bottom:0.5rem;">제목</label>
 
-                    <!-- ✅ 기존 제목 자동 채움 -->
                     <input type="text"
                            id="title"
                            name="title"
@@ -119,25 +129,40 @@
                 <div>
                     <label for="content" style="font-weight:600; color:#5e4633; margin-bottom:0.5rem;">내용</label>
 
-                    <!-- ✅ textarea는 th:text로 기존 내용 채움 -->
+                    <!-- ✅ 서버 원본 HTML 숨김 -->
+                    <textarea id="originalHtmlContent"
+                              style="display:none;"
+                              th:text="${post.getContent()}"></textarea>
+
                     <textarea id="content"
                               name="content"
                               rows="8"
                               class="form-control"
                               placeholder="내용을 입력하세요"
                               required
-                              th:text="${post.getContent()}"
-                              style="border:1px solid #d6ccc2; border-radius:0.6rem; font-size:0.9rem; padding:0.6rem; resize:none;"></textarea>
+                              style="border:1px solid #d6ccc2; border-radius:0.6rem; font-size:0.9rem; padding:0.6rem;"></textarea>
                 </div>
 
-                <!-- 제출 버튼 -->
+                <!-- ✅ 사진 -->
+                <div>
+                    <label style="font-weight:600; color:#5e4633; margin-bottom:0.5rem;">사진</label>
+                    <input type="file" id="imageFile" accept="image/*" class="form-control"
+                           style="border:1px solid #d6ccc2; border-radius:0.6rem; font-size:0.9rem;">
+                </div>
+
+                <button type="button"
+                        id="uploadImageBtn"
+                        class="btn btn-outline-secondary btn-block"
+                        style="border-radius:0.6rem;">
+                    사진 업로드
+                </button>
+
                 <button type="submit"
                         class="btn btn-block"
                         style="background-color:#8b5e34; color:white; font-weight:600; border-radius:0.6rem; padding:0.7rem 0;">
                     수정 완료
                 </button>
 
-                <!-- (선택) 취소/뒤로가기 버튼 -->
                 <a th:href="@{|/bulletin/free-board/${post.postId}|}"
                    class="btn btn-outline-secondary btn-block"
                    style="border-radius:0.6rem;">
@@ -168,5 +193,114 @@
         </nav>
     </div>
 </section>
+
+<!-- ================= JS (이미지 기능 동일) ================= -->
+<script>
+    const imageMap = new Map();
+    let imageCount = 0;
+
+    function insertAtCursor(textarea, text) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+
+        textarea.value = before + text + after;
+
+        const newPos = start + text.length;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        textarea.focus();
+    }
+
+    function buildRealHtmlContent(textareaValue) {
+        let html = textareaValue.replaceAll("\n", "<br>");
+
+        for (const [n, imageId] of imageMap.entries()) {
+            html = html.replaceAll(
+                `[이미지${n}]`,
+                `<img src="/api/v1/images/${imageId}" />`
+            );
+        }
+
+        return html;
+    }
+
+    function convertHtmlToEditorText(html) {
+        if (!html) return "";
+
+        let text = html.replaceAll("<br>", "\n");
+
+        const imgRegex = /<img\s+[^>]*src="\/api\/v1\/images\/(\d+)"[^>]*\/?>/g;
+
+        text = text.replace(imgRegex, (match, imageId) => {
+            imageCount++;
+            imageMap.set(imageCount, Number(imageId));
+            return `[이미지${imageCount}]`;
+        });
+
+        return text;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        const original = document.getElementById("originalHtmlContent").value;
+        document.getElementById("content").value = convertHtmlToEditorText(original);
+    });
+
+    document.getElementById("uploadImageBtn").addEventListener("click", async () => {
+        const fileInput = document.getElementById("imageFile");
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert("이미지를 선택하세요");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("fileName", file.name);
+        formData.append("contentType", file.type || "application/octet-stream");
+        formData.append("contentLength", file.size);
+
+        const urlResponse = await fetch("/api/v1/images/url", {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin"
+        });
+
+        if (!urlResponse.ok) {
+            alert("URL 발급 실패");
+            return;
+        }
+
+        const presigned = await urlResponse.json();
+
+        const response = await fetch("/api/v1/images/upload-complete", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            body: JSON.stringify({objectKey: presigned.objectKey})
+        });
+
+        if (!response.ok) {
+            alert("이미지 업로드 실패");
+            return;
+        }
+
+        imageCount++;
+        imageMap.set(imageCount, presigned.imageId);
+
+        const textarea = document.getElementById("content");
+        insertAtCursor(textarea, `\n[이미지${imageCount}]\n`);
+
+        fileInput.value = "";
+        alert("이미지 업로드 완료");
+    });
+
+    document.getElementById("editForm").addEventListener("submit", () => {
+        const textarea = document.getElementById("content");
+        textarea.value = buildRealHtmlContent(textarea.value);
+    });
+</script>
+
 </body>
 </html>
