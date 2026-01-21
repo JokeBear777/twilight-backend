@@ -50,7 +50,7 @@ public class BookController {
             @ModelAttribute BookRecommendationRequestDto request,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
-        bookService.requestRecommendation(request, userDetails);
+        bookService.requestRecommendationVer2(request, userDetails);
         return "wating-recommendation";
     }
 
