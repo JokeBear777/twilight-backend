@@ -7,6 +7,7 @@ import com.twilight.twilight.domain.book.entity.question.MemberQuestion;
 import com.twilight.twilight.domain.book.entity.question.MemberQuestionAnswer;
 import com.twilight.twilight.domain.book.entity.recommendation.Recommendation;
 import com.twilight.twilight.domain.book.entity.tag.Tag;
+import com.twilight.twilight.domain.book.infra.stats.TagStatsRepository;
 import com.twilight.twilight.domain.book.repository.book.BookQueryRepository;
 import com.twilight.twilight.domain.book.repository.book.BookRepository;
 import com.twilight.twilight.domain.book.repository.question.AnswerTagMappingRepository;
@@ -60,6 +61,7 @@ public class BookService {
     private final BookTagsRepository bookTagsRepository;
     private final TagRepository tagRepository;
     private final BookQueryRepository bookQueryRepository;
+    private final TagStatsRepository tagStatsRepository;
 
     public QuestionAnswerResponseDto createCategoryQuestionAndAnswer() {
         MemberQuestion categoryQuestion =
@@ -188,7 +190,6 @@ public class BookService {
     ) {
         List<Tag> tagList = getTagList(request);
         List<Long> sortedTagIds = getSortedTagIdList(tagList);
-
         List<GetBookInfoDto> one = pickByOneTag(sortedTagIds);
         if (sendIfDecided(one, userDetails, request, tagList)) {
             return;
@@ -359,9 +360,7 @@ public class BookService {
 
     private List<Long> getSortedTagIdList(List<Tag> tagList) {
         List<Long> tagIdList = getTagIds(tagList);
-        List<Long> sorted = tagIdList;
-
-        return sorted;
+        return tagStatsRepository.getSortedTagIdList(tagIdList);
     }
 
     private boolean isGoodRange(List<GetBookInfoDto> books) {
