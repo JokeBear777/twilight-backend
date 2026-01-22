@@ -7,6 +7,8 @@ import com.twilight.twilight.domain.book.entity.question.MemberQuestion;
 import com.twilight.twilight.domain.book.entity.question.MemberQuestionAnswer;
 import com.twilight.twilight.domain.book.entity.recommendation.Recommendation;
 import com.twilight.twilight.domain.book.entity.tag.Tag;
+import com.twilight.twilight.domain.book.infra.stats.TagStatsRepository;
+import com.twilight.twilight.domain.book.repository.book.BookQueryRepository;
 import com.twilight.twilight.domain.book.repository.book.BookRepository;
 import com.twilight.twilight.domain.book.repository.question.AnswerTagMappingRepository;
 import com.twilight.twilight.domain.book.repository.question.MemberQuestionAnswerRepository;
@@ -58,7 +60,8 @@ public class BookService {
     private final RecommendationRepository recommendationRepository;
     private final BookTagsRepository bookTagsRepository;
     private final TagRepository tagRepository;
-
+    private final BookQueryRepository bookQueryRepository;
+    private final TagStatsRepository tagStatsRepository;
 
     public QuestionAnswerResponseDto createCategoryQuestionAndAnswer() {
         MemberQuestion categoryQuestion =
@@ -180,6 +183,210 @@ public class BookService {
         return tagList;
     }
 
+    @Transactional(readOnly = true)
+    public void requestRecommendationVer2(
+            BookRecommendationRequestDto request,
+            CustomUserDetails userDetails
+    ) {
+        List<Tag> tagList = getTagList(request);
+        List<Long> sortedTagIds = getSortedTagIdList(tagList);
+        List<GetBookInfoDto> one = pickByOneTag(sortedTagIds);
+        if (sendIfDecided(one, userDetails, request, tagList)) {
+            return;
+        }
+
+        List<GetBookInfoDto> two = pickByTwoTags(sortedTagIds);
+        if (sendIfDecided(two, userDetails, request, tagList)) {
+            return;
+        }
+
+        List<GetBookInfoDto> three = pickByThreeTags(sortedTagIds);
+        if (sendIfDecided(three, userDetails, request, tagList)) {
+            return;
+        }
+
+        List<GetBookInfoDto> four = pickByFourTags(sortedTagIds);
+        if (sendIfDecided(four, userDetails, request, tagList)) {
+            return;
+        }
+
+        //다안되면 랜덤으로
+        List<GetBookInfoDto> randomBookList = selectRandomBookList(four);
+        sendInfoToAiServer(randomBookList, userDetails.getMember(), request, tagList);
+
+    }
+
+    private boolean sendIfDecided(
+            List<GetBookInfoDto> candidates,
+            CustomUserDetails userDetails,
+            BookRecommendationRequestDto request,
+            List<Tag> tagList
+    ) {
+        if (candidates.isEmpty()) {
+            throw new NoSuchElementException("조건에 맞는 책이 없습니다.");
+        }
+
+        if (isTooSmall(candidates) || isGoodRange(candidates)) {
+            sendInfoToAiServer(trimToMax15(candidates),
+                    userDetails.getMember(),
+                    request,
+                    tagList);
+            return true;
+        }
+
+        return false; //아직 더 좁혀야 함 (tooLarge)
+    }
+
+    private List<GetBookInfoDto> pickByFourTags(List<Long> sortedTagIds) {
+
+        if (sortedTagIds == null || sortedTagIds.size() < 4) {
+            throw new IllegalArgumentException("4개 태그 조합을 위해 tagId가 4개 필요합니다.");
+        }
+
+        return bookQueryRepository.findBooksByTagsLimit(
+                List.of(
+                        sortedTagIds.get(0),
+                        sortedTagIds.get(1),
+                        sortedTagIds.get(2),
+                        sortedTagIds.get(3)
+                ),
+                16
+        );
+    }
+
+    private List<GetBookInfoDto> pickByOneTag(List<Long> sortedTagIds) {
+        for (Long baseTagId : sortedTagIds) {
+
+            List<GetBookInfoDto> candidates =
+                    bookQueryRepository.findBooksByTagsLimit(List.of(baseTagId), 16);
+
+            // 너무 작으면 다음(덜 희귀한) 태그로 넘어감
+            if (isTooSmall(candidates)) continue;
+
+            // 적당히 크면 바로 반환
+            return candidates;
+        }
+
+        // 여기까지 왔다는 건 "모든 태그가 너무 작다"는 뜻
+        // => 그나마 가장 큰 태그(= 가장 덜 희귀한 tag)를 반환
+        Long lastTagId = sortedTagIds.get(sortedTagIds.size() - 1);
+
+        return bookQueryRepository.findBooksByTagsLimit(List.of(lastTagId), 16);
+    }
+
+    private List<GetBookInfoDto> pickByTwoTags(List<Long> sortedTagIds) {
+        if (sortedTagIds.size() < 2) {
+            throw new IllegalArgumentException("2개 태그 조합을 위해 tagId가 2개 이상 필요합니다.");
+        }
+
+        Long base = sortedTagIds.get(0);
+
+        List<Long> partners;
+
+        if (sortedTagIds.size() == 2) {
+            partners = List.of(sortedTagIds.get(1));
+        } else if (sortedTagIds.size() == 3) {
+            partners = List.of(sortedTagIds.get(1), sortedTagIds.get(2));
+        } else {
+            partners = List.of(
+                    sortedTagIds.get(1),
+                    sortedTagIds.get(2),
+                    sortedTagIds.get(3)
+            );
+        }
+
+        for (Long partner : partners) {
+
+            List<Long> two = List.of(base, partner);
+
+            List<GetBookInfoDto> candidates =
+                    bookQueryRepository.findBooksByTagsLimit(two, 16);
+
+            // 아무것도 없으면 다음 조합
+            if (candidates.isEmpty()) continue;
+
+            // 너무 작으면(=필터링이 과했다) 다음 조합
+            if (isTooSmall(candidates)) continue;
+
+            // goodRange면 바로 확정
+            if (isGoodRange(candidates)) return candidates;
+
+            // tooLarge라도 일단 “one보다 줄어든 결과”니까 일단 반환하고
+            // 상위에서 3태그로 더 좁히면 됨
+            return candidates;
+        }
+
+        // 너무 작아지는 것만 피했으니, 마지막 조합 결과라도 반환
+        return bookQueryRepository.findBooksByTagsLimit(
+                List.of(base, sortedTagIds.get(sortedTagIds.size() - 1)),
+                16
+        );
+    }
+
+    private List<GetBookInfoDto> pickByThreeTags(List<Long> sortedTagIds) {
+
+        if (sortedTagIds == null || sortedTagIds.size() < 3) {
+            throw new IllegalArgumentException("3개 태그 조합을 위해 tagId가 3개 이상 필요합니다.");
+        }
+
+        Long t0 = sortedTagIds.get(0);
+        Long t1 = sortedTagIds.get(1);
+
+        List<Long> base = List.of(t0, t1);
+
+        for (int i = 2; i < sortedTagIds.size(); i++) {
+
+            Long extra = sortedTagIds.get(i);
+
+            List<Long> three = List.of(t0, t1, extra);
+
+            List<GetBookInfoDto> candidates =
+                    bookQueryRepository.findBooksByTagsLimit(three, 16);
+
+            if (candidates.isEmpty()) continue;
+
+            if (isTooSmall(candidates)) continue;
+
+            if (isGoodRange(candidates)) return candidates;
+
+            return candidates;
+        }
+
+        return bookQueryRepository.findBooksByTagsLimit(
+                List.of(t0, t1, sortedTagIds.get(2)),
+                16
+        );
+    }
+
+    private List<Long> getSortedTagIdList(List<Tag> tagList) {
+        List<Long> tagIdList = getTagIds(tagList);
+        return tagStatsRepository.getSortedTagIdList(tagIdList);
+    }
+
+    private boolean isGoodRange(List<GetBookInfoDto> books) {
+        return books.size() >= 5 && books.size() <= 15;
+    }
+
+    private boolean isTooBig(List<GetBookInfoDto> books) {
+        return books.size() > 15 ;
+    }
+
+    private boolean isTooSmall(List<GetBookInfoDto> books) {
+        return books.size() < 5;
+    }
+
+    private List<GetBookInfoDto> trimToMax15(List<GetBookInfoDto> books) {
+        if (books.size() <= 15) return books;
+        return books.subList(0, 15);
+    }
+
+    private List<Long> getTagIds(List<Tag> tagList) {
+        return tagList.stream()
+                .map(Tag::getTagId)
+                .toList();
+    }
+
+    /*
     //태그 찾아서 검색 시스템 개발하자
     @Transactional(readOnly=true)
     public void requestRecommendation(
@@ -318,8 +525,10 @@ public class BookService {
         List<Book> randomBookList = selectRandomBookList(bookList);
         sendInfoToAiServer(randomBookList, userDetails.getMember(), request, tagList);
     }
+    */
 
-    private List<Book> selectRandomBookList(List<Book> bookList) {
+
+    private List<GetBookInfoDto> selectRandomBookList(List<GetBookInfoDto> bookList) {
         int pickSize = Math.min(10, bookList.size());
 
         Set<Integer> randomIndexSet = new HashSet<>();
@@ -328,7 +537,7 @@ public class BookService {
             randomIndexSet.add(randomIndex);
         }
 
-        List<Book> randomBookList = new ArrayList<>();
+        List<GetBookInfoDto> randomBookList = new ArrayList<>();
         for (Integer index : randomIndexSet) {
             randomBookList.add(bookList.get(index));
         }
@@ -352,7 +561,7 @@ public class BookService {
     }
 
     private void sendInfoToAiServer(
-            List<Book> bookList,
+            List<GetBookInfoDto> bookList,
             Member member,
             BookRecommendationRequestDto request,
             List<Tag> tagList) {
@@ -366,7 +575,7 @@ public class BookService {
 
         log.info("추천 대상 도서 제목 리스트: {}",
                 bookList.stream()
-                        .map(Book::getName)
+                        .map(GetBookInfoDto::getName)
                         .collect(Collectors.toList())
         );
 
@@ -422,7 +631,7 @@ public class BookService {
                 .build();
     }
 
-    private List<AiRecommendationPayload.BooksInfo> mapBookListToPayload(List<Book> bookList) {
+    private List<AiRecommendationPayload.BooksInfo> mapBookListToPayload(List<GetBookInfoDto> bookList) {
         log.info("👉 받은 Book 개수: {}", bookList.size());
         bookList.forEach(book -> log.info("Book name: {}", book.getName()));
 
