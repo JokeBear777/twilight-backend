@@ -1,0 +1,27 @@
+.footer-nav {
+    background-color: #ead4c5;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0.5rem 0;
+    border-bottom-left-radius: 1.5rem;
+    border-bottom-right-radius: 1.5rem;
+}
+
+.footer-nav .btn-dark {
+    background: transparent;
+    border: none;
+    color: #4e3b31;
+    flex: 1;
+}
+
+.footer-nav .btn-dark.active {
+    color: #d4a373;
+}
+
+.footer-nav .btn-dark i {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+}
+
+.footer-nav .btn-dark small {
+    font-size: 0.75rem;
+}

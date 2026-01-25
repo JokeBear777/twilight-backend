@@ -6,6 +6,7 @@
     <title>홈화면</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/footer-nav.css">
 
     <style>
         @font-face {
@@ -136,35 +137,6 @@
         .separator {
             margin: 0 0.3rem;
             color: #c2b6a3;
-        }
-
-        .footer-nav {
-            background-color: #ead4c5;
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom-left-radius: 1.5rem;
-            border-bottom-right-radius: 1.5rem;
-        }
-
-        .footer-nav .btn-dark {
-            background: transparent;
-            border: none;
-            color: #4e3b31;
-            flex: 1;
-        }
-
-        .footer-nav .btn-dark.active {
-            color: #c45b5b;
-        }
-
-        .footer-nav .btn-dark i {
-            font-size: 1.2rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .footer-nav .btn-dark small {
-            font-size: 0.75rem;
         }
 
         .scroll-area {
@@ -378,25 +350,7 @@
             </div>
         </div>
 
-        <nav class="footer-nav d-flex justify-content-around text-white">
-            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/home'">
-                <i class="fas fa-home"></i><small>홈</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/record'">
-                <i class="fas fa-book"></i><small>내 서재</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center"
-                    onclick="location.href='/book/recommendation'">
-                <i class="fas fa-search"></i><small>책 추천</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center active"
-                    onclick="location.href='/bulletin'">
-                <i class="fas fa-comments"></i><small>게시판</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/mypage'">
-                <i class="fas fa-user"></i><small>내 정보</small>
-            </button>
-        </nav>
+        <div th:replace="fragments/footer-nav :: footer('community')"></div>
     </div>
 </section>
 </body>
