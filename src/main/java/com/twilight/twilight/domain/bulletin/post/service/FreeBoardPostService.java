@@ -6,9 +6,10 @@ import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostRecommendation;
 import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPostReply;
 import com.twilight.twilight.domain.bulletin.post.repository.*;
-import com.twilight.twilight.domain.member.entity.Member;
-import com.twilight.twilight.domain.member.type.Role;
+import com.twilight.twilight.domain.member.member.entity.Member;
+import com.twilight.twilight.domain.member.member.type.Role;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
+import com.twilight.twilight.global.cursor.CursorResponse;
 import com.twilight.twilight.global.outbox.repository.IndexingOutboxRepository;
 import com.twilight.twilight.global.outbox.service.FreeBoardSearchSyncPublisher;
 import com.twilight.twilight.global.policy.ThresholdGenerator;
@@ -328,10 +329,10 @@ public class FreeBoardPostService {
     }
 
     public List<GetFreeBoardPostListDto> getPostsByCursor(PageCursorRequest pageCursorRequest) {
-        Cursor requestCursor = pageCursorRequest.toCursor();
+        PostCursor requestPostCursor = pageCursorRequest.toCursor();
         int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
 
-        return freeBoardPostQueryRepository.findPostsByCursor(requestCursor, pageSizeOrDefault + 1);
+        return freeBoardPostQueryRepository.findPostsByCursor(requestPostCursor, pageSizeOrDefault + 1);
     }
 
     public CursorResponse<GetFreeBoardPostListDto> getCursorResponse(
@@ -339,15 +340,15 @@ public class FreeBoardPostService {
             int pageSize
     ) {
         boolean hasNext = postLists.size() > pageSize;
-        Cursor nextCursor = null;
+        PostCursor nextPostCursor = null;
 
         if (hasNext) {
             GetFreeBoardPostListDto last = postLists.get(postLists.size() - 1);
-            nextCursor = new Cursor(last.getFreeBoardPostId(), last.getCreatedAt());
+            nextPostCursor = new PostCursor(last.getFreeBoardPostId(), last.getCreatedAt());
             postLists.remove(postLists.size() - 1);
         }
 
-        return new CursorResponse<>(postLists, nextCursor, hasNext);
+        return new CursorResponse<>(postLists, nextPostCursor, hasNext);
     }
 
     public CursorResponse<GetFreeBoardPostReplyDto> getReplyCursorResponse(
@@ -355,17 +356,17 @@ public class FreeBoardPostService {
             int pageSize
     ) {
         boolean hasNext = replyDtoList.size() > pageSize;
-        Cursor nextCursor = null;
+        PostCursor nextPostCursor = null;
 
         if (hasNext) {
             GetFreeBoardPostReplyDto last = replyDtoList.get(replyDtoList.size() - 1);
-            nextCursor = new Cursor(last.getFreeBoardPostReplyId(), last.getCreatedAt());
+            nextPostCursor = new PostCursor(last.getFreeBoardPostReplyId(), last.getCreatedAt());
             replyDtoList.remove(replyDtoList.size() - 1);
         }
 
-        log.info("[Test] ReplyCursor nextCursor = {}, replyDtoList = {} ", nextCursor, replyDtoList);
+        log.info("[Test] ReplyCursor nextCursor = {}, replyDtoList = {} ", nextPostCursor, replyDtoList);
 
-        return new CursorResponse<>(replyDtoList, nextCursor, hasNext);
+        return new CursorResponse<>(replyDtoList, nextPostCursor, hasNext);
     }
 
 
@@ -374,11 +375,11 @@ public class FreeBoardPostService {
             Long postId,
             Long parentReplyId
             ) {
-        Cursor requestCursor = pageCursorRequest.toCursor();
+        PostCursor requestPostCursor = pageCursorRequest.toCursor();
         int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
 
         return  freeBoardPostQueryRepository.findChildReplyByCursor(
-                requestCursor,
+                requestPostCursor,
                 pageSizeOrDefault,
                 postId,
                 parentReplyId
@@ -386,12 +387,12 @@ public class FreeBoardPostService {
     }
 
     public List<GetFreeBoardPostListDto> getSearchPostsByCursor(PageCursorRequest pageCursorRequest, String keyword) {
-        Cursor requestCursor = pageCursorRequest.toCursor();
+        PostCursor requestPostCursor = pageCursorRequest.toCursor();
         int pageSizeOrDefault = pageCursorRequest.pageSizeOrDefault();
         List<String> ngrams = ngramGenerator.generateByKeyword(keyword);
         int threshold = thresholdGenerator.searchThresholdGenerator(ngrams.size());
 
-        if (requestCursor == null) {
+        if (requestPostCursor == null) {
             //첫페이지
             return freeBoardSearchRepository.findFirstSearchPosts(
                     ngrams,
@@ -404,7 +405,7 @@ public class FreeBoardPostService {
         return freeBoardSearchRepository.findSearchPostsByCursor(
                 ngrams,
                 threshold,
-                requestCursor,
+                requestPostCursor,
                 pageSizeOrDefault + 1
         );
     }

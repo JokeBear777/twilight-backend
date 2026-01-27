@@ -2,8 +2,8 @@ package com.twilight.twilight.domain.bulletin.post.controller;
 
 import com.twilight.twilight.domain.bulletin.post.dto.*;
 import com.twilight.twilight.domain.bulletin.post.service.FreeBoardPostService;
+import com.twilight.twilight.global.cursor.CursorResponse;
 import com.twilight.twilight.global.search.NgramGenerator;
-import com.twilight.twilight.global.search.NgramIndex;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +49,7 @@ public class FreeBoardApiController {
             @PathVariable("post-id") Long postId,
             @PathVariable("reply-id") Long replyId
     ) {
-        Cursor cursor = pageCursorRequest.toCursor();
+        PostCursor postCursor = pageCursorRequest.toCursor();
         int pageSize = pageCursorRequest.pageSizeOrDefault();
 
         List<GetFreeBoardPostReplyDto> replyLists = freeBoardPostService.getChildrenRepliesByCursor(

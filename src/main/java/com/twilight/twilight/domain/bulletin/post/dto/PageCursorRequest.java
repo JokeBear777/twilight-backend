@@ -7,11 +7,11 @@ public record PageCursorRequest(
         LocalDateTime lastCreatedAt,
         Integer size
 ) {
-    public Cursor toCursor() {
+    public PostCursor toCursor() {
         if (lastId == null || lastCreatedAt == null) {
             return null;
         }
-        return new Cursor(lastId, lastCreatedAt);
+        return new PostCursor(lastId, lastCreatedAt);
     }
 
     public int pageSizeOrDefault() {

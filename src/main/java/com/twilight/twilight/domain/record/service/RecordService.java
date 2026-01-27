@@ -2,7 +2,7 @@ package com.twilight.twilight.domain.record.service;
 
 import com.twilight.twilight.domain.book.entity.book.Book;
 import com.twilight.twilight.domain.book.repository.book.BookRepository;
-import com.twilight.twilight.domain.member.entity.Member;
+import com.twilight.twilight.domain.member.member.entity.Member;
 import com.twilight.twilight.domain.record.dto.AddReadingRecordDto;
 import com.twilight.twilight.domain.record.dto.BookRecordResponseDto;
 import com.twilight.twilight.domain.record.dto.ResponseReadingRecordDto;

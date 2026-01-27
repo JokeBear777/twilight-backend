@@ -1,7 +1,7 @@
 package com.twilight.twilight.global.authentication.springSecurity.service;
 
-import com.twilight.twilight.domain.member.entity.Member;
-import com.twilight.twilight.domain.member.repository.MemberRepository;
+import com.twilight.twilight.domain.member.member.entity.Member;
+import com.twilight.twilight.domain.member.member.repository.MemberRepository;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

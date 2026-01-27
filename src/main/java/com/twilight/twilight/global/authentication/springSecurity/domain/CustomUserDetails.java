@@ -1,8 +1,7 @@
 package com.twilight.twilight.global.authentication.springSecurity.domain;
 
-import com.twilight.twilight.domain.member.entity.Member;
+import com.twilight.twilight.domain.member.member.entity.Member;
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

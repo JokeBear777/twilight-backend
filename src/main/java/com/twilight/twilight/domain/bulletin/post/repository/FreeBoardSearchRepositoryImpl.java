@@ -1,6 +1,6 @@
 package com.twilight.twilight.domain.bulletin.post.repository;
 
-import com.twilight.twilight.domain.bulletin.post.dto.Cursor;
+import com.twilight.twilight.domain.bulletin.post.dto.PostCursor;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostListDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
@@ -59,7 +59,7 @@ public class FreeBoardSearchRepositoryImpl implements FreeBoardSearchRepository 
         );
     }
 
-    public List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, Cursor cursor, int size) {
+    public List<GetFreeBoardPostListDto> findSearchPostsByCursor(List<String> ngrams, int threshold, PostCursor postCursor, int size) {
         if (ngrams.isEmpty()) {
             return List.of();
         }
@@ -95,8 +95,8 @@ public class FreeBoardSearchRepositoryImpl implements FreeBoardSearchRepository 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("ngrams", ngrams)
                 .addValue("threshold", threshold)
-                .addValue("createdAt", cursor.lastCreatedAt())
-                .addValue("lastId", cursor.lastId())
+                .addValue("createdAt", postCursor.lastCreatedAt())
+                .addValue("lastId", postCursor.lastId())
                 .addValue("limit", size);
 
         return namedParameterJdbcTemplate.query(

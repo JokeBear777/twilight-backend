@@ -3,19 +3,19 @@ package com.twilight.twilight.domain.bulletin.post.repository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.twilight.twilight.domain.bulletin.post.dto.Cursor;
+import com.twilight.twilight.domain.bulletin.post.dto.PostCursor;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostListDto;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostReplyDto;
 import com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPostReply;
-import com.twilight.twilight.domain.member.entity.QMember;
+import com.twilight.twilight.domain.member.member.entity.QMember;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.twilight.twilight.domain.member.entity.QMember.member;
+import static com.twilight.twilight.domain.member.member.entity.QMember.member;
 
 @RequiredArgsConstructor
 @Repository
@@ -201,16 +201,16 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
 
     @Override
     public List<GetFreeBoardPostListDto> findPostsByCursor(
-            Cursor cursor,
+            PostCursor postCursor,
             int size) {
         BooleanBuilder where = new BooleanBuilder();
 
         Long lastId = null;
         LocalDateTime lastCreatedAt = null;
 
-        if (cursor != null) {
-            lastId = cursor.lastId();
-            lastCreatedAt = cursor.lastCreatedAt();
+        if (postCursor != null) {
+            lastId = postCursor.lastId();
+            lastCreatedAt = postCursor.lastCreatedAt();
         }
 
         if (lastId != null && lastCreatedAt != null) {
@@ -251,7 +251,7 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
 
     @Override
     public List<GetFreeBoardPostReplyDto> findChildReplyByCursor(
-            Cursor cursor,
+            PostCursor postCursor,
             int size,
             Long postId,
             Long parentId
@@ -265,15 +265,15 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
         where.and(qFreeBoardPostReply.freeBoardPost.freeBoardPostId.eq(postId));
         where.and(qFreeBoardPostReply.parentReply.freeBoardPostReplyId.eq(parentId));
 
-        if (cursor != null
-                && cursor.lastCreatedAt() != null
-                && cursor.lastId() != null) {
+        if (postCursor != null
+                && postCursor.lastCreatedAt() != null
+                && postCursor.lastId() != null) {
 
             where.and(
-                    qFreeBoardPostReply.createdAt.gt(cursor.lastCreatedAt())
+                    qFreeBoardPostReply.createdAt.gt(postCursor.lastCreatedAt())
                             .or(
-                                    qFreeBoardPostReply.createdAt.eq(cursor.lastCreatedAt())
-                                            .and(qFreeBoardPostReply.freeBoardPostReplyId.gt(cursor.lastId()))
+                                    qFreeBoardPostReply.createdAt.eq(postCursor.lastCreatedAt())
+                                            .and(qFreeBoardPostReply.freeBoardPostReplyId.gt(postCursor.lastId()))
                             )
             );
         }

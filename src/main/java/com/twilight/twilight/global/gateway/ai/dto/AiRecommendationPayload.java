@@ -1,8 +1,5 @@
 package com.twilight.twilight.global.gateway.ai.dto;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.twilight.twilight.domain.member.entity.Personality;
-import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
