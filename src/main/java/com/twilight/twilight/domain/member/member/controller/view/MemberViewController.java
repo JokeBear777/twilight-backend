@@ -1,5 +1,7 @@
 package com.twilight.twilight.domain.member.member.controller.view;
 
+import com.twilight.twilight.domain.member.follow.Service.FollowService;
+import com.twilight.twilight.domain.member.follow.dto.FollowCountResponse;
 import com.twilight.twilight.domain.member.member.dto.MyPageMemberInfoDto;
 import com.twilight.twilight.domain.member.member.dto.MyPageUpdateDto;
 import com.twilight.twilight.domain.member.member.service.MemberService;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class MemberViewController {
 
     private final MemberService memberService;
+    private final FollowService followService;
 
     @GetMapping("/login")
     public String login() {
@@ -41,15 +44,30 @@ public class MemberViewController {
 
         return "redirect:/login";
     }
-
+    
+    //수정필요한 컨트롤러
     @GetMapping("/mypage")
-    public String myPage(
+    public String mypage(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model) {
+        String memberName = userDetails.getMember().getMemberName();
+        model.addAttribute("memberName", memberName);
+
+        FollowCountResponse followCount =
+                followService.getFollowCount(userDetails.getMember().getMemberId());
+        model.addAttribute("followCount", followCount);
+
+        return "myPage/mypage";
+    }
+
+    @GetMapping("/mypage/detail")
+    public String myPageDetail(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model
             ) {
         MyPageMemberInfoDto dto = memberService.getMyPageMemberInfo(userDetails.getMember());
         model.addAttribute("memberInfo", dto);
-        return "mypage";
+        return "myPage/mypage-detail";
     }
 
     @GetMapping("/mypage/edit")
@@ -59,7 +77,7 @@ public class MemberViewController {
             ) {
         MyPageMemberInfoDto dto = memberService.getMyPageMemberInfo(userDetails.getMember());
         model.addAttribute("memberInfo", dto);
-        return "mypage-edit";
+        return "myPage/mypage-edit";
     }
 
     @PostMapping("/mypage/edit")

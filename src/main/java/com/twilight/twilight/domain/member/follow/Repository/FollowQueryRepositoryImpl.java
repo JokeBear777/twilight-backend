@@ -14,6 +14,7 @@ import com.twilight.twilight.domain.member.member.entity.QMember;
 import jakarta.persistence.EntityManager;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -23,6 +24,7 @@ import static com.twilight.twilight.domain.member.member.entity.QMember.member;
 
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class FollowQueryRepositoryImpl implements FollowQueryRepository {
 
 
@@ -132,9 +134,7 @@ public class FollowQueryRepositoryImpl implements FollowQueryRepository {
 
     @Override
     public FollowCountResponse getFollowCount(Long targetMemberId) {
-
-
-        return queryFactory
+        FollowCountResponse res = queryFactory
                 .select(Projections.constructor(
                         FollowCountResponse.class,
 
@@ -154,7 +154,13 @@ public class FollowQueryRepositoryImpl implements FollowQueryRepository {
                                         follow.follower.memberId.eq(targetMemberId)
                                 )
                 ))
+                .from(follow)
+                .limit(1)
                 .fetchOne();
+
+        return res != null
+                ? res
+                : new FollowCountResponse(0L, 0L);
     }
 
 

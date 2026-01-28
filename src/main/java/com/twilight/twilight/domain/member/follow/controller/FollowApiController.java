@@ -9,6 +9,7 @@ import com.twilight.twilight.domain.member.follow.dto.GetFollowListDto;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class FollowApiController {
     @PostMapping("/follows/{targetMemberId}")
     public ResponseEntity<?> follow(
             @PathVariable Long targetMemberId,
-            CustomUserDetails customUserDetails
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         followService.followTargetMember(
                 targetMemberId,
@@ -36,7 +37,7 @@ public class FollowApiController {
     @DeleteMapping("/follows/{targetMemberId}")
     public ResponseEntity<?> unfollow(
             @PathVariable Long targetMemberId,
-            CustomUserDetails customUserDetails
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         followService.unfollowTargetMember(
                 targetMemberId,
@@ -46,7 +47,7 @@ public class FollowApiController {
         return ResponseEntity.ok("unfollow success");
     }
 
-    @GetMapping("{memberId}/followers")
+    @GetMapping("/{memberId}/followers")
     public CursorResponse<GetFollowListDto> getFollowers(
             @PathVariable Long memberId,
             FollowCursorRequest pageRequest
@@ -56,9 +57,9 @@ public class FollowApiController {
         return followService.getCursorResponse(followListDtoList, pageRequest.pageSizeOrDefault());
     }
 
-    @GetMapping("me/followers")
+    @GetMapping("/me/followers")
     public CursorResponse<?> getMyFollowers(
-            CustomUserDetails customUserDetails,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             FollowCursorRequest pageRequest
     ) {
         List<GetFollowListDto> followListDtoList = followService.getFollowersByCursor(
@@ -69,7 +70,7 @@ public class FollowApiController {
         return followService.getCursorResponse(followListDtoList, pageRequest.pageSizeOrDefault());
     }
 
-    @GetMapping("{memberId}/followings")
+    @GetMapping("/{memberId}/followings")
     public CursorResponse<GetFollowListDto> getFollowings(
             @PathVariable Long memberId,
             FollowCursorRequest pageRequest
@@ -82,9 +83,9 @@ public class FollowApiController {
         return followService.getCursorResponse(followingListDtoList, pageRequest.pageSizeOrDefault());
     }
 
-    @GetMapping("me/followings")
+    @GetMapping("/me/followings")
     public CursorResponse<GetFollowListDto> getMyFollowings(
-            CustomUserDetails customUserDetails,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             FollowCursorRequest pageRequest
     ) {
 
@@ -96,10 +97,10 @@ public class FollowApiController {
         return followService.getCursorResponse(followingListDtoList, pageRequest.pageSizeOrDefault());
     }
 
-    @GetMapping("{targetMemberId}/exists")
+    @GetMapping("/{targetMemberId}/exists")
     public ResponseEntity<?> getFollowStatus(
             @PathVariable Long targetMemberId,
-            CustomUserDetails customUserDetails
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         FollowStatusResponse response = followService.getFollowStatus(
                 targetMemberId, customUserDetails.getMember().getMemberId()
@@ -108,7 +109,7 @@ public class FollowApiController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("{targetMemberId}/follow-count")
+    @GetMapping("/{targetMemberId}/follow-count")
     public ResponseEntity<?> getTargetMemberFollowCount(
             @PathVariable Long targetMemberId
     ) {
@@ -116,9 +117,9 @@ public class FollowApiController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("{me/follow-count")
+    @GetMapping("/me/follow-count")
     public ResponseEntity<?> getTargetMemberFollowCount(
-            CustomUserDetails customUserDetails
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         FollowCountResponse response = followService.getFollowCount(customUserDetails.getMember().getMemberId());
         return ResponseEntity.ok(response);

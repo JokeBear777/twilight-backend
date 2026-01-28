@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/footer-nav.css">
+
+    <style>
+        @font-face {
+            font-family: 'CookieRun-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
+        }
+
+        body {
+            font-family: 'CookieRun-Regular', sans-serif;
+            background: #e6dcd0;
+            min-height: 100vh;
+        }
+
+        .card-container {
+            width: 375px;
+            height: 650px;
+            background: #fffaf6;
+            border-radius: 1.5rem;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border: 2px solid #d6ccc2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-body-custom {
+            flex-grow: 1;
+            padding: 1.5rem;
+            text-align: center;
+            color: #5e4633;
+        }
+
+        .follow-box {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+        }
+
+        .follow-box a {
+            color: #5e4633;
+            text-decoration: none;
+        }
+
+        .follow-count {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card-container">
+
+        <div class="card-body-custom">
+
+            <!-- 프로필 -->
+            <i class="fas fa-user-circle fa-4x mb-3"></i>
+
+            <h4 th:text="${memberName}">민우</h4>
+
+            <!-- 팔로워 / 팔로잉 -->
+            <div class="follow-box">
+                <a href="/mypage/followers">
+                    <div class="follow-count" th:text="${followCount.followerCount}">123</div>
+                    <small>팔로워</small>
+                </a>
+                <a href="/mypage/following">
+                    <div class="follow-count" th:text="${followCount.followingCount}">45</div>
+                    <small>팔로잉</small>
+                </a>
+            </div>
+
+            <!-- 버튼 -->
+            <div class="mt-4">
+                <a href="/mypage/detail" class="btn btn-outline-dark mb-2 btn-block">
+                    <i class="fas fa-id-card"></i> 세부 정보
+                </a>
+
+                <a href="/mypage/edit" class="btn btn-outline-dark btn-block">
+                    <i class="fas fa-pen"></i> 프로필 수정
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="fragments/footer-nav :: footer('mypage')"></div>
+    </div>
+</section>
+</body>
+</html>
