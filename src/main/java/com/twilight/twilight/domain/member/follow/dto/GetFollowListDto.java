@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GetFollowListDto {
 
-    private Long followerId;
+    private Long memberId;
 
-    private String followerName;
+    private String memberName;
 
     private String selfImageUrl;
 }

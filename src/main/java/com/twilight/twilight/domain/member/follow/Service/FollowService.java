@@ -1,16 +1,15 @@
 package com.twilight.twilight.domain.member.follow.Service;
 
+import com.twilight.twilight.domain.member.follow.dto.*;
 import com.twilight.twilight.global.cursor.CursorResponse;
 import com.twilight.twilight.domain.member.follow.Repository.FollowQueryRepository;
 import com.twilight.twilight.domain.member.follow.Repository.FollowRepository;
-import com.twilight.twilight.domain.member.follow.dto.FollowCursor;
-import com.twilight.twilight.domain.member.follow.dto.FollowCursorRequest;
-import com.twilight.twilight.domain.member.follow.dto.GetFollowListDto;
 import com.twilight.twilight.domain.member.follow.entity.Follow;
 import com.twilight.twilight.domain.member.member.entity.Member;
 import com.twilight.twilight.domain.member.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +62,11 @@ public class FollowService {
         if (meId == null) {
             throw new IllegalArgumentException("meId가 null 입니다.");
         }
+        if (!memberRepository.existsById(targetMemberId)) {
+            throw new IllegalArgumentException(
+                    "존재하지 않는 사용자입니다. ID: " + targetMemberId
+            );
+        }
 
         followQueryRepository.deleteByFollowerIdAndFollowingId(meId, targetMemberId);
     }
@@ -74,8 +78,11 @@ public class FollowService {
         if (targetMemberId == null) {
             throw new IllegalArgumentException("targetMemberId가 null 입니다.");
         }
-        memberRepository.findById(targetMemberId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다. ID: " + targetMemberId));
+        if (!memberRepository.existsById(targetMemberId)) {
+            throw new IllegalArgumentException(
+                    "존재하지 않는 사용자입니다. ID: " + targetMemberId
+            );
+        }
 
         FollowCursor cursor = request.toCursor();
 
@@ -95,12 +102,64 @@ public class FollowService {
 
         if (hasNext) {
             GetFollowListDto last = list.get(list.size() - 1);
-            nextCursor = new FollowCursor(last.getFollowerId());
+            nextCursor = new FollowCursor(last.getMemberId());
             list.remove(list.size() - 1);
         }
 
         return new CursorResponse<>(list, nextCursor, hasNext);
     }
 
+    public List<GetFollowListDto> getFollowingsByCursor(
+            FollowCursorRequest request,
+            Long targetMemberId
+    ) {
+        if (targetMemberId == null) {
+            throw new IllegalArgumentException("targetMemberId가 null 입니다.");
+        }
+        if (!memberRepository.existsById(targetMemberId)) {
+            throw new IllegalArgumentException(
+                    "존재하지 않는 사용자입니다. ID: " + targetMemberId
+            );
+        }
 
+        FollowCursor cursor = request.toCursor();
+
+
+        return followQueryRepository.findFollowingListByCursor(
+                cursor,
+                request.pageSizeOrDefault() + 1,
+                targetMemberId
+        );
+    }
+
+    public FollowStatusResponse getFollowStatus(
+            Long targetMemberId,
+            Long meId
+    ) {
+        if (targetMemberId == null) {
+            throw new IllegalArgumentException("targetMemberId가 null 입니다.");
+        }
+        if (!memberRepository.existsById(targetMemberId)) {
+            throw new IllegalArgumentException(
+                    "존재하지 않는 사용자입니다. ID: " + targetMemberId
+            );
+        }
+
+        return followQueryRepository.getFollowStatus(targetMemberId, meId);
+    }
+
+    public FollowCountResponse getFollowCount(
+            Long targetMemberId
+    ) {
+        if (targetMemberId == null) {
+            throw new IllegalArgumentException("targetMemberId가 null 입니다.");
+        }
+        if (!memberRepository.existsById(targetMemberId)) {
+            throw new IllegalArgumentException(
+                    "존재하지 않는 사용자입니다. ID: " + targetMemberId
+            );
+        }
+
+        return followQueryRepository.getFollowCount(targetMemberId);
+    }
 }
