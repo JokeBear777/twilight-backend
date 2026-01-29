@@ -33,8 +33,7 @@
             margin: 2rem auto;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
             border: 2px solid #d6ccc2;
-            /* ✅ 100vw 밑줄이 잘리지 않도록 */
-            overflow: visible;
+            overflow: hidden; /* ✅ 중요: 내부 scroll-area가 제대로 스크롤되게 */
         }
 
         .card-header {
@@ -43,49 +42,46 @@
             font-size: 1.2rem;
             font-weight: bold;
             color: #5e4633;
+            flex: 0 0 auto;
         }
 
-        /* ✅ 위→아래로 쌓이고, 가로는 꽉 채움 */
         .card-body-center {
-            flex-grow: 1;
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
-            /* 위에서부터 */
             align-items: stretch;
-            /* 가로 꽉 채우기 */
             padding: 0;
-            /* 리스트가 자체 패딩 갖도록 0 */
-            text-align: left;
-            min-height: 0;
+            min-height: 0; /* ✅ 중요 */
+        }
+
+        .scroll-area {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: .5rem;
+            min-height: 0; /* ✅ 중요 */
         }
 
         .free-board-post-list {
             display: flex;
             flex-direction: column;
             gap: 0;
-            /* 밑줄로 구분하니 간격은 0 */
         }
 
-        /* ⬇ 개별 게시글 줄 */
         .notice-item {
             position: relative;
-            /* ::after 기준 */
             display: flex;
             flex-direction: column;
             padding: 0.8rem 1rem;
-            /* 좌우 패딩은 카드 안쪽 여백 */
             background: #fffaf6;
-            /* 카드 배경과 동일 */
         }
 
-        /* ✅ 스마트폰 화면 전체폭 밑줄 */
         .notice-item::after {
             content: "";
             position: absolute;
             left: 0;
             bottom: 0;
-            width: 100%; /* ✅ 카드 안쪽 폭만 사용 */
+            width: 100%;
             border-bottom: 1px solid rgba(0, 0, 0, 0.15);
             pointer-events: none;
             z-index: 1;
@@ -95,7 +91,6 @@
             border-bottom: none;
         }
 
-        /* 첫 줄: [댓글수] 제목 */
         .post-top {
             display: flex;
             align-items: center;
@@ -109,11 +104,8 @@
 
         .post-title {
             flex: 1;
-            /* 남는 공간 차지 */
             min-width: 0;
-            /* 말줄임 처리를 위해 */
             display: block;
-            /* flex item이라 같은 줄 유지 */
             color: #3e2f20;
             text-decoration: none;
             font-weight: 600;
@@ -126,12 +118,10 @@
             text-decoration: underline;
         }
 
-        /* 두 번째 줄: 시간 | 작성자 | 조회 | 추천 */
         .post-bottom {
             font-size: 0.8rem;
             color: #8a7a6a;
             margin-left: 1.6rem;
-            /* 댓글수 영역만큼 살짝 들여쓰기 */
         }
 
         .separator {
@@ -139,42 +129,44 @@
             color: #c2b6a3;
         }
 
-        .scroll-area {
-            flex: 1 1 auto;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            /* iOS 부드러운 스크롤 */
-            padding-bottom: .5rem;
-            /* footer와 간격 */
+        .empty-message {
+            text-align: center;
+            color: #777;
+            margin: 2rem 0;
+        }
+
+        .loading-hint {
+            text-align: center;
+            color: #9a8f83;
+            font-size: 0.85rem;
+            padding: 0.75rem 0;
         }
     </style>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const postList = document.getElementById("post-list");
-            const sentinel = document.getElementById("scroll-sentinel");
             const scrollRoot = document.querySelector(".scroll-area");
+            const loadingHint = document.getElementById("loading-hint");
 
-            console.log("[init] postList:", !!postList, "sentinel:", !!sentinel, "scrollRoot:", !!scrollRoot);
-
-            if (!postList) return;
-
-
-            if (!sentinel) {
-                console.error("[init] #scroll-sentinel 이 DOM에 없습니다. post-list 내부 맨 아래에 추가하세요.");
+            if (!postList || !scrollRoot) {
+                console.error("[init] element missing", { postList, scrollRoot });
                 return;
             }
 
             let isLoading = false;
             let hasNext = true;
-            let lastId = null;// cursor.lastId
+            let lastId = null;
             let lastCreatedAt = null;
-            const pageSize = 10;
             let emptyMessage = null;
+
+            // ✅ 스크롤 바닥에서 몇 px 남았을 때 로딩할지
+            const BOTTOM_GAP = 200;
 
             async function loadMorePosts() {
                 if (isLoading || !hasNext) return;
                 isLoading = true;
+                if (loadingHint) loadingHint.style.display = "block";
 
                 let url = `/api/v1/bulletin/free-board?pageSize=10`;
                 if (lastId !== null && lastCreatedAt !== null) {
@@ -185,69 +177,85 @@
                 console.log("[fetch]", url);
 
                 try {
-                    const res = await fetch(url, {
-                        headers: { "Accept": "application/json" }
-                    });
+                    const res = await fetch(url, { headers: { "Accept": "application/json" } });
                     if (!res.ok) throw new Error("요청 실패: " + res.status);
 
                     const result = await res.json();
+                    const data = Array.isArray(result.data) ? result.data : [];
 
-                    if (
-                        result.data.length === 0 &&
-                        lastId === null &&
-                        !emptyMessage
-                    ) {
+                    // ✅ 첫 페이지 + 데이터 없음
+                    if (data.length === 0 && lastId === null && !emptyMessage) {
                         emptyMessage = document.createElement("p");
+                        emptyMessage.className = "empty-message";
                         emptyMessage.textContent = "게시글이 없습니다.";
-                        emptyMessage.style.textAlign = "center";
-                        emptyMessage.style.color = "#777";
-                        emptyMessage.style.margin = "2rem 0";
-                        postList.prepend(emptyMessage);
+                        postList.appendChild(emptyMessage);
+
+                        hasNext = false;
+                        return;
                     }
 
-                    result.data.forEach(post => {
-                        postList.insertBefore(createPostElement(post), sentinel);
-                    });
+                    data.forEach(post => postList.appendChild(createPostElement(post)));
 
-                    hasNext = result.hasNext;
+                    hasNext = result.hasNext === true;
                     lastId = result.nextCursor ? result.nextCursor.lastId : null;
                     lastCreatedAt = result.nextCursor?.lastCreatedAt ?? null;
 
-                    if (!hasNext) observer.disconnect();
+                    console.log("[cursor]", { hasNext, lastId, lastCreatedAt, loaded: data.length });
+
                 } catch (e) {
                     console.error(e);
+                    hasNext = false; // 에러면 무한 재시도 방지
                 } finally {
                     isLoading = false;
+                    if (loadingHint) loadingHint.style.display = "none";
+
+                    // ✅ 핵심: "스크롤이 아직도 바닥 근처면" 다음 페이지를 계속 당겨서 화면 채움
+                    // (게시글이 적어서 스크롤이 안 생길 때도 자동으로 여러 페이지 로딩됨)
+                    if (hasNext && isNearBottom()) {
+                        setTimeout(loadMorePosts, 0);
+                    }
                 }
             }
+
+            function isNearBottom() {
+                const { scrollTop, clientHeight, scrollHeight } = scrollRoot;
+                return scrollTop + clientHeight >= scrollHeight - BOTTOM_GAP;
+            }
+
+            // ✅ 스크롤 이벤트 방식 (가장 안정적)
+            scrollRoot.addEventListener("scroll", () => {
+                if (hasNext && !isLoading && isNearBottom()) {
+                    loadMorePosts();
+                }
+            }, { passive: true });
 
             function createPostElement(post) {
                 const item = document.createElement("div");
                 item.className = "notice-item";
                 item.innerHTML = `
-      <div class="post-top">
-        <span class="comment-count">${post.numberOfComments ?? 0}</span>
-        <a class="post-title" href="/bulletin/free-board/${post.freeBoardPostId}">
-          ${escapeHtml(post.title ?? "")}
-        </a>
-      </div>
-      <div class="post-bottom">
-        <span>${formatDate(post.createdAt)}</span>
-        <span class="separator">|</span>
-        <span>${escapeHtml(post.name ?? "")}</span>
-        <span class="separator">|</span>
-        <span>조회 ${post.views ?? 0}</span>
-        <span class="separator">|</span>
-        <span>추천 ${post.numberOfRecommendations ?? 0}</span>
-      </div>
-    `;
+                    <div class="post-top">
+                        <span class="comment-count">${post.numberOfComments ?? 0}</span>
+                        <a class="post-title" href="/bulletin/free-board/${post.freeBoardPostId}">
+                            ${escapeHtml(post.title ?? "")}
+                        </a>
+                    </div>
+                    <div class="post-bottom">
+                        <span>${formatDate(post.createdAt)}</span>
+                        <span class="separator">|</span>
+                        <span>${escapeHtml(post.name ?? "")}</span>
+                        <span class="separator">|</span>
+                        <span>조회 ${post.views ?? 0}</span>
+                        <span class="separator">|</span>
+                        <span>추천 ${post.numberOfRecommendations ?? 0}</span>
+                    </div>
+                `;
                 return item;
             }
 
             function formatDate(isoString) {
                 if (!isoString) return "";
                 const date = new Date(isoString);
-                if (isNaN(date.getTime())) return String(isoString); // 역직렬화 포맷 이상할 때 대비
+                if (isNaN(date.getTime())) return String(isoString);
                 return date.toLocaleString("ko-KR", {
                     year: "numeric", month: "2-digit", day: "2-digit",
                     hour: "2-digit", minute: "2-digit"
@@ -263,21 +271,7 @@
                     .replaceAll("'", "&#039;");
             }
 
-            // root는 scroll-area (너 코드처럼)
-            const observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting) {
-                    console.log("[observer] intersect");
-                    loadMorePosts();
-                }
-            }, {
-                root: scrollRoot,     // scroll-area에서 스크롤되므로 여기로 지정
-                rootMargin: "200px",  // 바닥 닿기 전에 미리 로딩
-                threshold: 0.01
-            });
-
-            observer.observe(sentinel);
-
-            // 초기에도 한 번 채워주기 (스크롤이 충분히 안 생기면 observer가 바로 안 불릴 수 있음)
+            // ✅ 초기 로딩 + 화면이 꽉 찰 때까지 자동으로 더 로딩
             loadMorePosts();
         });
     </script>
@@ -286,11 +280,20 @@
 <body>
 <section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
     <div class="card-main-container">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>📌 자유게시판</span>
 
-            <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center"
+        <div class="card-header d-flex align-items-center">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link p-0 mr-2"
+                        style="color:#5e4633;font-size:1.2rem;"
+                        onclick="history.back()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+
+                <span style="font-weight:bold; color:#5e4633;">자유게시판</span>
+            </div>
+
+            <div class="ml-auto d-flex">
+                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center mr-2"
                         style="padding: 0.25rem 0.6rem; font-size: 0.8rem;"
                         onclick="location.href='/bulletin/free-board/search'">
                     <i class="fas fa-search mr-1"></i>검색
@@ -304,49 +307,10 @@
             </div>
         </div>
 
-
         <div class="card-body-center">
             <div class="scroll-area">
-
-                <!-- ✅ 테스트용 더미 데이터 (배포 시 제거) -->
-                <div class="free-board-post-list" id="post-list">
-
-                    <!--
-                 th:with="freeBoardPostList=${[
-       {'id':1,'title':'첫 글입니다','commentCount':12,'timeAgo':'3분 전','writer':'민우','viewCount':123,'likeCount':7},
-       {'id':2,'title':'두 번째 테스트 글','commentCount':3,'timeAgo':'7분 전','writer':'홍길동','viewCount':45,'likeCount':2},
-       {'id':3,'title':'세 번째 글입니다 제목이 길면 이렇게 길어져도 말줄임으로 깔끔하게 처리됩니다','commentCount':0,'timeAgo':'12분 전','writer':'Alice','viewCount':9,'likeCount':0},
-       {'id':4,'title':'네 번째 글 - 모바일에선 밑줄이 화면 끝까지!','commentCount':8,'timeAgo':'20분 전','writer':'Bob','viewCount':88,'likeCount':10}
-     ]}">
-    -->
-
-
-                    <!--
-                    <div th:each="post : ${postList}" class="notice-item">
-
-                        <div class="post-top">
-                            <span class="comment-count" th:text="${post.numberOfComments}">12</span>
-                            <a class="post-title" th:href="@{/bulletin/free-board/{id}(id=${post.freeBoardPostId})}"
-                               th:text="${post.title}">[TEST] 제목입니다. 1</a>
-                        </div>
-
-                        <div class="post-bottom">
-                        <span class="post-time"
-                              th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2022-03-12 12:23</span>
-                            <span class="separator">|</span>
-                            <span class="post-writer" th:text="${post.name}">작성자</span>
-                            <span class="separator">|</span>
-                            <span class="post-view" th:text="'조회 ' + ${post.views}">조회 12</span>
-                            <span class="separator">|</span>
-                            <span class="post-like" th:text="'추천 ' + ${post.numberOfRecommendations}">추천 5</span>
-                        </div>
-                    </div>
-                   -->
-
-                    <!-- 무한 스크롤 감지용 -->
-                    <div id="scroll-sentinel" style="height: 1px;"></div>
-                </div>
-
+                <div class="free-board-post-list" id="post-list"></div>
+                <div id="loading-hint" class="loading-hint" style="display:none;">불러오는 중…</div>
             </div>
         </div>
 
