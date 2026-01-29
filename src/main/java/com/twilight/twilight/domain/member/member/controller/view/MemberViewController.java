@@ -90,4 +90,16 @@ public class MemberViewController {
         return "redirect:/mypage";
     }
 
+    @GetMapping("/mypage/followers")
+    public String myFollowers(Model model) {
+        model.addAttribute("type", "followers");
+        return "mypage/follow-list";
+    }
+
+    @GetMapping("/mypage/followings")
+    public String myFollowings(Model model) {
+        model.addAttribute("type", "followings");
+        return "mypage/follow-list";
+    }
+
 }
