@@ -2,8 +2,10 @@ package com.twilight.twilight.domain.member.member.controller.view;
 
 import com.twilight.twilight.domain.member.follow.Service.FollowService;
 import com.twilight.twilight.domain.member.follow.dto.FollowCountResponse;
+import com.twilight.twilight.domain.member.follow.dto.FollowStatusResponse;
 import com.twilight.twilight.domain.member.member.dto.MyPageMemberInfoDto;
 import com.twilight.twilight.domain.member.member.dto.MyPageUpdateDto;
+import com.twilight.twilight.domain.member.member.dto.TargetMemberInfoResponse;
 import com.twilight.twilight.domain.member.member.service.MemberService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
@@ -100,6 +103,29 @@ public class MemberViewController {
     public String myFollowings(Model model) {
         model.addAttribute("type", "followings");
         return "mypage/follow-list";
+    }
+
+    @GetMapping("/members/{targetMemberId}")
+    public String getMemberInfo(
+            @PathVariable Long targetMemberId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            Model model
+    ) {
+        FollowStatusResponse followStatusResponse = followService.getFollowStatus(
+                targetMemberId, customUserDetails.getMember().getMemberId()
+        );
+        model.addAttribute("followStatus", followStatusResponse);
+
+        FollowCountResponse followCount =
+                followService.getFollowCount(targetMemberId);
+        model.addAttribute("followCount", followCount);
+
+        TargetMemberInfoResponse memberInfo = memberService.getMemberInfo(targetMemberId);
+
+        model.addAttribute("targetMemberId", targetMemberId);
+        model.addAttribute("memberInfo", memberInfo);
+
+        return "memberPage/member-page";
     }
 
 }

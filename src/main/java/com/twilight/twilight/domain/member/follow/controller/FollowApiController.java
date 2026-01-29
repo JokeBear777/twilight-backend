@@ -97,7 +97,7 @@ public class FollowApiController {
         return followService.getCursorResponse(followingListDtoList, pageRequest.pageSizeOrDefault());
     }
 
-    @GetMapping("/{targetMemberId}/exists")
+    @GetMapping("/{targetMemberId}/status")
     public ResponseEntity<?> getFollowStatus(
             @PathVariable Long targetMemberId,
             @AuthenticationPrincipal CustomUserDetails customUserDetails

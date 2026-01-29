@@ -1,7 +1,9 @@
 package com.twilight.twilight.domain.member.follow.Repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -109,27 +111,34 @@ public class FollowQueryRepositoryImpl implements FollowQueryRepository {
             Long targetMemberId,
             Long meId
     ) {
-        return queryFactory
-                .select(Projections.constructor(
-                        FollowStatusResponse.class,
-                        JPAExpressions
-                                .selectOne()
-                                .from(follow)
-                                .where(
-                                        follow.follower.memberId.eq(meId),
-                                        follow.following.memberId.eq(targetMemberId)
-                                )
-                                .exists(),
-                        JPAExpressions
-                                .selectOne()
-                                .from(follow)
-                                .where(
-                                        follow.follower.memberId.eq(targetMemberId),
-                                        follow.following.memberId.eq(meId)
-                                )
-                                .exists()
-                        ))
-                .fetchOne();
+        BooleanExpression iFollow = JPAExpressions
+                .selectOne()
+                .from(follow)
+                .where(
+                        follow.follower.memberId.eq(meId),
+                        follow.following.memberId.eq(targetMemberId)
+                )
+                .exists();
+
+        BooleanExpression followsMe = JPAExpressions
+                .selectOne()
+                .from(follow)
+                .where(
+                        follow.follower.memberId.eq(targetMemberId),
+                        follow.following.memberId.eq(meId)
+                )
+                .exists();
+
+        // 더미 FROM 하나 추가 (중요)
+        Tuple result = queryFactory
+                .select(iFollow, followsMe)
+                .from(QMember.member) // 아무 테이블 하나면 됨
+                .fetchFirst();
+
+        return new FollowStatusResponse(
+                result.get(iFollow),
+                result.get(followsMe)
+        );
     }
 
     @Override

@@ -84,6 +84,11 @@
             margin: 0 .35rem;
         }
 
+        .meta-row a:hover {
+            text-decoration: underline;
+            color: #8b5e34;
+        }
+
         .title {
             font-size: 1.1rem;
             font-weight: 550;
@@ -223,14 +228,21 @@
 
             <!-- 메타 정보 -->
             <div class="meta-row">
-                <span><i class="fa-regular fa-user"></i> <span th:text="${post.name}">작성자</span></span>
+                 <span>
+        <i class="fa-regular fa-user"></i>
+        <a th:href="@{/members/{id}(id=${post.memberId})}"
+           style="color: inherit; text-decoration: none; font-weight: 600;">
+            <span th:text="${post.name}">작성자</span>
+        </a>
+    </span>
                 <span class="meta-sep">|</span>
                 <span><i class="fa-regular fa-clock"></i> <span
                         th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">2025.11.06 12:34</span></span>
                 <span class="meta-sep">|</span>
                 <span><i class="fa-regular fa-eye"></i> <span th:text="${post.views}">0</span></span>
                 <span class="meta-sep">|</span>
-                <span><i class="fa-regular fa-thumbs-up"></i> <span th:text="${post.numberOfRecommendations}">0</span></span>
+                <span><i class="fa-regular fa-thumbs-up"></i> <span
+                        th:text="${post.numberOfRecommendations}">0</span></span>
                 <span class="meta-sep">|</span>
                 <span><i class="fa-regular fa-comments"></i> <span th:text="${post.numberOfComments}">0</span></span>
             </div>

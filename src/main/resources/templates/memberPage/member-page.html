@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${memberInfo.memberName()} + ' 프로필'">프로필</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/footer-nav.css">
+
+    <style>
+        @font-face {
+            font-family: 'CookieRun-Regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff')
+            format('woff');
+        }
+
+        body {
+            font-family: 'CookieRun-Regular', sans-serif;
+            background: #e6dcd0;
+            min-height: 100vh;
+        }
+
+        .card-container {
+            width: 375px;
+            height: 650px;
+            background: #fffaf6;
+            border-radius: 1.5rem;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border: 2px solid #d6ccc2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-body-custom {
+            flex-grow: 1;
+            padding: 1.8rem 1.5rem;
+            text-align: center;
+            color: #5e4633;
+        }
+
+        /* ===== 프로필 ===== */
+
+        .profile-icon {
+            font-size: 4rem;
+            color: #8b5e34;
+            margin-bottom: 0.6rem;
+        }
+
+        .member-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        /* ===== 관계 문구 ===== */
+
+        .relation-text {
+            font-size: 0.85rem;
+            color: #8a7a6a;
+            margin-bottom: 1.2rem;
+        }
+
+        /* ===== 버튼 ===== */
+
+        .follow-btn {
+            border-radius: 999px;
+            padding: 0.4rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1.5px solid #8b5e34;
+            background: transparent;
+            color: #8b5e34;
+            transition: all 0.15s ease;
+        }
+
+        .follow-btn:hover {
+            background: #8b5e34;
+            color: #fffaf6;
+        }
+
+        .following {
+            background: #f3ede6;
+            border-color: #c2b6a3;
+            color: #6e5a45;
+        }
+
+        .following:hover {
+            background: #e6dcd0;
+            color: #5e4633;
+        }
+
+        /* ===== 팔로우 수 ===== */
+
+        .follow-box {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 2rem;
+        }
+
+        .follow-count {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .follow-label {
+            font-size: 0.75rem;
+            color: #8a7a6a;
+        }
+    </style>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card-container">
+
+        <div class="card-body-custom">
+
+            <!-- 프로필 아이콘 -->
+            <i class="fas fa-user-circle profile-icon"></i>
+
+            <!-- 이름 -->
+            <div class="member-name"
+                 th:text="${memberInfo.memberName()}">
+                작성자
+            </div>
+
+            <!-- 관계 문구 (인스타 톤) -->
+            <div class="relation-text">
+                <span th:if="${followStatus.following and followStatus.follower}">
+                    서로 팔로우 중
+                </span>
+
+                <span th:if="${followStatus.following and !followStatus.follower}">
+                    내가 팔로우함
+                </span>
+
+                <span th:if="${!followStatus.following and followStatus.follower}">
+                    나를 팔로우함
+                </span>
+
+                <span th:if="${!followStatus.following and !followStatus.follower}">
+                    아직 연결되지 않음
+                </span>
+            </div>
+
+            <!-- 버튼 -->
+            <div>
+                <button th:if="${!followStatus.following}"
+                        class="follow-btn"
+                        th:onclick="|follow(${targetMemberId})|">
+                    팔로우
+                </button>
+
+                <button th:if="${followStatus.following}"
+                        class="follow-btn following"
+                        th:onclick="|unfollow(${targetMemberId})|">
+                    언팔로우
+                </button>
+            </div>
+
+            <!-- 팔로워 / 팔로잉 -->
+            <div class="follow-box">
+                <div>
+                    <div class="follow-count"
+                         th:text="${followCount.followerCount}">
+                        0
+                    </div>
+                    <div class="follow-label">팔로워</div>
+                </div>
+
+                <div>
+                    <div class="follow-count"
+                         th:text="${followCount.followingCount}">
+                        0
+                    </div>
+                    <div class="follow-label">팔로잉</div>
+                </div>
+            </div>
+
+        </div>
+
+        <div th:replace="fragments/footer-nav :: footer('member')"></div>
+    </div>
+</section>
+
+<script>
+    function follow(targetMemberId) {
+        fetch(`/social/api/v1/follows/${targetMemberId}`, {
+            method: "POST"
+        }).then(() => location.reload());
+    }
+
+    function unfollow(targetMemberId) {
+        fetch(`/social/api/v1/follows/${targetMemberId}`, {
+            method: "DELETE"
+        }).then(() => location.reload());
+    }
+</script>
+
+</body>
+</html>

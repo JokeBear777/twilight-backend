@@ -3,6 +3,7 @@ package com.twilight.twilight.domain.member.member.service;
 import com.twilight.twilight.domain.member.member.dto.AddMemberRequestDto;
 import com.twilight.twilight.domain.member.member.dto.MyPageMemberInfoDto;
 import com.twilight.twilight.domain.member.member.dto.MyPageUpdateDto;
+import com.twilight.twilight.domain.member.member.dto.TargetMemberInfoResponse;
 import com.twilight.twilight.domain.member.member.entity.*;
 import com.twilight.twilight.domain.member.member.repository.*;
 import com.twilight.twilight.domain.member.member.type.Role;
@@ -158,6 +159,14 @@ public class MemberService {
                     .build();
             memberInterestRepository.save(mi);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public TargetMemberInfoResponse getMemberInfo (Long targetMemberId) {
+        Member member = memberRepository.findById(targetMemberId)
+                .orElseThrow(()-> new IllegalArgumentException("존재하지 않는 ID 입니다 ID: " + targetMemberId));
+
+        return TargetMemberInfoResponse.from(member);
     }
 
 

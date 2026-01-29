@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
        String accept = request.getHeader("Accept");
         boolean wantsJson = accept != null && accept.contains("application/json")
                 || request.getRequestURI().startsWith("/api/");
-
+        log.error("에러 발생", e);
         log.info("에러메세지:{}" , e.getMessage());
 
         if (wantsJson) {
