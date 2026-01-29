@@ -39,3 +39,6 @@ out/
 .env
 *.jar
 *.log
+
+# QueryDSL generated
+src/main/generated/

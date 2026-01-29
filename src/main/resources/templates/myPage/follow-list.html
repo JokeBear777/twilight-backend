@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${type == 'followers' ? '팔로워' : '팔로잉'}">팔로워</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        body {
+            background: #e6dcd0;
+            font-family: 'CookieRun-Regular', sans-serif;
+        }
+
+        .card-container {
+            width: 375px;
+            height: 650px;
+            background: #fffaf6;
+            border-radius: 1.5rem;
+            margin: 2rem auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border: 2px solid #d6ccc2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            padding: 1rem;
+            font-weight: bold;
+            color: #5e4633;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .back-btn {
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .follow-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .profile-icon {
+            font-size: 2rem;
+            margin-right: 0.75rem;
+            color: #8b5e34;
+        }
+
+        .nickname {
+            font-weight: 600;
+            color: #3e2f20;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #8a7a6a;
+            margin: 2.5rem 0;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card-container">
+
+        <!-- 헤더 -->
+        <div class="card-header">
+            <i class="fas fa-arrow-left back-btn" onclick="history.back()"></i>
+            <span th:text="${type == 'followers' ? '팔로워' : '팔로잉'}">팔로워</span>
+        </div>
+
+        <!-- 리스트 -->
+        <div class="scroll-area" id="scrollRoot">
+            <div id="follow-list"></div>
+            <div id="scroll-sentinel" style="height:1px;"></div>
+        </div>
+
+    </div>
+</section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+
+        const type = "[[${type}]]";
+        const apiUrl = `/social/api/v1/me/${type}`;
+
+        const listEl = document.getElementById("follow-list");
+        const sentinel = document.getElementById("scroll-sentinel");
+        const scrollRoot = document.getElementById("scrollRoot");
+
+        let isLoading = false;
+        let hasNext = true;
+        let lastId = null;
+        let emptyMessage = null;
+
+        async function loadMore() {
+            if (isLoading || !hasNext) return;
+            isLoading = true;
+
+            let url = apiUrl + `?size=15`;
+            if (lastId !== null) url += `&lastId=${lastId}`;
+
+            try {
+                const res = await fetch(url);
+
+                // ✅ 핵심 1: 204 No Content 처리
+                if (res.status === 204 && lastId === null && !emptyMessage) {
+                    showEmpty();
+                    observer.disconnect();
+                    return;
+                }
+
+                if (!res.ok) throw new Error("fetch fail");
+
+                const result = await res.json();
+
+                // ✅ 핵심 2: data null 대응
+                const data = Array.isArray(result.data) ? result.data : [];
+
+                if (data.length === 0 && lastId === null && !emptyMessage) {
+                    showEmpty();
+                    observer.disconnect();
+                    return;
+                }
+
+                data.forEach(user => {
+                    listEl.appendChild(createItem(user));
+                });
+
+                hasNext = result.hasNext === true;
+                lastId = result.nextCursor?.lastId ?? null;
+
+                if (!hasNext) observer.disconnect();
+
+            } catch (e) {
+                console.error(e);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function showEmpty() {
+            emptyMessage = document.createElement("p");
+            emptyMessage.className = "empty-message";
+            emptyMessage.textContent =
+                type === "followers"
+                    ? "아직 팔로워가 없습니다."
+                    : "아직 팔로잉한 사용자가 없습니다.";
+            listEl.prepend(emptyMessage);
+        }
+
+        function createItem(user) {
+            const div = document.createElement("div");
+            div.className = "follow-item";
+            div.innerHTML = `
+            <i class="fas fa-user-circle profile-icon"></i>
+            <div class="nickname">${user.name ?? ""}</div>
+        `;
+            return div;
+        }
+
+        const observer = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) loadMore();
+        }, {
+            root: scrollRoot,
+            rootMargin: "200px"
+        });
+
+        observer.observe(sentinel);
+        loadMore();
+    });
+</script>
+
+
+</body>
+</html>

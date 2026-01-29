@@ -2,10 +2,10 @@ package com.twilight.twilight.domain.bulletin.post.controller;
 
 import com.twilight.twilight.domain.bulletin.post.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.post.dto.*;
-import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.service.FreeBoardPostService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import com.twilight.twilight.global.config.FreeBoardPageProps;
+import com.twilight.twilight.global.cursor.CursorResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

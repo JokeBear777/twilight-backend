@@ -1,6 +1,6 @@
 package com.twilight.twilight.domain.bulletin.post.repository;
 
-import com.twilight.twilight.domain.bulletin.post.dto.Cursor;
+import com.twilight.twilight.domain.bulletin.post.dto.PostCursor;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostListDto;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostReplyDto;
 
@@ -14,6 +14,6 @@ public interface FreeBoardPostQueryRepository {
     List<GetFreeBoardPostReplyDto> findChildrenByParentIds(List<Long> parentIds);
     long countParentRepliesByPostId(Long postId);
     List<GetFreeBoardPostReplyDto> findParentRepliesOrderByCreatedAtAsc(Long postId, Long page, int size);
-    List<GetFreeBoardPostListDto> findPostsByCursor(Cursor cursor, int size);
-    List<GetFreeBoardPostReplyDto> findChildReplyByCursor(Cursor cursor, int size, Long postId, Long parentId);
+    List<GetFreeBoardPostListDto> findPostsByCursor(PostCursor postCursor, int size);
+    List<GetFreeBoardPostReplyDto> findChildReplyByCursor(PostCursor postCursor, int size, Long postId, Long parentId);
 }

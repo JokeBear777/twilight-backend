@@ -4,237 +4,96 @@
 <head>
   <meta charset="UTF-8">
   <title>게시판</title>
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <style>
-    @font-face {
-      font-family: 'CookieRun-Regular';
-      src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
-      font-weight: normal;
-      font-style: normal;
-    }
+  <link rel="stylesheet" href="/css/footer-nav.css">
+  <link rel="stylesheet" href="/css/bulletin.css">
 
-    body {
-      font-family: 'CookieRun-Regular', sans-serif;
-      background: #e6dcd0;
-      margin: 0;
-      padding: 0;
-    }
-
-    .card-container {
-      width: 375px;
-      height: 650px;
-      background-color: #fffaf6;
-      border-radius: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      margin: 2rem auto;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-      border: 2px solid #d6ccc2;
-    }
-
-    .card-header {
-      padding: 1.25rem 1.5rem 0 1.5rem;
-      background-color: transparent;
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #5e4633;
-    }
-
-    .card-body{
-      padding: 1rem 1.5rem;
-      overflow-y: auto;
-    }
-
-    .section-title {
-      font-size: 1.2rem;
-      color: #7b4b39;
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .post-title {
-      flex: 1;
-      /* 남는 공간 차지 */
-      min-width: 0;
-      /* 말줄임 처리를 위해 */
-      display: block;
-      /* flex item이라 같은 줄 유지 */
-      color: #3e2f20;
-      text-decoration: none;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .book-carousel-wrapper {
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }
-
-    .book-carousel-wrapper::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    .book-carousel-wrapper::-webkit-scrollbar-thumb {
-      background-color: #c8b8a7;
-      border-radius: 4px;
-    }
-
-    .book-carousel {
-      display: flex;
-      gap: 12px;
-    }
-
-    .book-card {
-      flex: 0 0 auto;
-      width: 120px;
-      background: #fffaf6;
-      border: 1px solid #e0d6cc;
-      border-radius: 12px;
-      padding: 10px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .notice-list {
-      background-color: #fff;
-      border-radius: 0.75rem;
-      padding: 0.5rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    .notice-item {
-      font-size: 0.95rem;
-      color: #3e2f20;
-      margin-bottom: 0.1rem;
-
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .fa-thumbs-up {
-      color: #e63946;
-      margin-right: 4px;
-      font-size: 0.9rem;
-    }
-
-    .popular-list {
-      background-color: #fce2e2;
-      border-radius: 0.75rem;
-      padding: 0.5rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    .footer-nav {
-      background-color: #ead4c5;
-      border-top: 1px solid rgba(0, 0, 0, 0.05);
-      padding: 0.5rem 0;
-      border-bottom-left-radius: 1.5rem;
-      border-bottom-right-radius: 1.5rem;
-    }
-
-    .footer-nav .btn-dark {
-      background: transparent;
-      border: none;
-      color: #4e3b31;
-      flex: 1;
-    }
-
-    .footer-nav .btn-dark i {
-      font-size: 1.2rem;
-      margin-bottom: 0.25rem;
-    }
-
-    .footer-nav .btn-dark small {
-      font-size: 0.75rem;
-    }
-  </style>
 </head>
 
 <body>
 <section class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
   <div class="card-container">
+
     <div class="card-header">
-      📌 게시판
+      💬 커뮤니티
     </div>
+
     <div class="card-body">
 
-      <div class="popular-list">🔥인기글</div>
+      <!-- ✅ 피드/게시판 토글 -->
+      <div class="social-toggle">
+        <a class="social-tab" th:href="@{/social(view='feed')}">피드</a>
+        <a class="social-tab active" th:href="@{/bulletin}">게시판</a>
+      </div>
+
+      <!-- ✅ 카테고리 카드 -->
+      <div class="category-grid">
+        <a class="category-card" th:href="@{/bulletin/free-board/list}">
+          <div class="category-icon">
+            <i class="fa-solid fa-pen"></i>
+          </div>
+          <div class="category-title">자유게시판</div>
+          <div class="category-desc">
+            가볍게 아무 말이나<br>
+            오늘의 생각을 공유해요
+          </div>
+        </a>
+
+        <div class="category-card" style="opacity: 0.7; cursor: not-allowed;">
+          <div class="category-icon">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <div class="category-title">독후감 / 에세이</div>
+          <div class="category-desc">
+            책을 읽고 느낀 점을<br>
+            기록해보세요 (준비중)
+          </div>
+        </div>
+      </div>
+
+      <!-- ✅ 인기글 (사진 스타일 / 프로필 없음 / 불 없음) -->
+      <div class="popular-title">인기 글</div>
+
       <div class="popular-list">
-        <div class="notice-item">1. 테스트용 메세지 입니다 1
-          <span class="likes">
-              <i class="fa-solid fa-thumbs-up"></i> <span class="like-count">24</span>
-            </span>
-        </div>
-        <div class="notice-item">2. 테스트용 메세지 입니다 2
-          <span class="likes">
-              <i class="fa-solid fa-thumbs-up"></i> <span class="like-count">24</span>
-            </span>
-        </div>
-        <div class="notice-item">3. 테스트용 메세지 입니다 3
-          <span class="likes">
-              <i class="fa-solid fa-thumbs-up"></i> <span class="like-count">24</span>
-            </span>
-        </div>
+        <a class="popular-item" href="#">
+          <div class="popular-left">
+            <div class="popular-post-title">재밌는 책 추천 무턱드려요</div>
+            <div class="popular-time">30분 전</div>
+          </div>
+          <div class="popular-right">
+            <i class="fa-solid fa-heart"></i> 5
+          </div>
+        </a>
+
+        <a class="popular-item" href="#">
+          <div class="popular-left">
+            <div class="popular-post-title">독후감 작성할 때의 팁!</div>
+            <div class="popular-time">1시간 전</div>
+          </div>
+          <div class="popular-right">
+            <i class="fa-solid fa-heart"></i> 4
+          </div>
+        </a>
+
+        <a class="popular-item" href="#">
+          <div class="popular-left">
+            <div class="popular-post-title">오늘의 독서 목표 공유합니다</div>
+            <div class="popular-time">2시간 전</div>
+          </div>
+          <div class="popular-right">
+            <i class="fa-solid fa-heart"></i> 7
+          </div>
+        </a>
       </div>
 
-
-      <!-- 자유게시판 제목 클릭 시 /bulletin/free-board 로 이동 -->
-      <a th:href="@{/bulletin/free-board/list}" class="section-title">자유게시판</a>
-      <div class="notice-list">
-        <!-- 리스트 반복 -->
-        <div th:each="post : ${freeBoardPostList}" class="notice-item">
-          <a class="notice-item" th:href="@{/bulletin/free-board/{id}(id=${post.getFreeBoardPostId()})}" th:text="${post.title}">
-            [TEST] 게시글 제목
-          </a>
-        </div>
-      </div>
-
-      <div class="section-title">독후감/에세이 게시판</div>
-      <div class="notice-list">
-        <div class="notice-item">테스트용 메세지 입니다 1</div>
-        <div class="notice-item">테스트용 메세지 입니다 2</div>
-        <div class="notice-item">테스트용 메세지 입니다 3</div>
-      </div>
-
-      <div class="section-title">독서 포럼</div>
-      <div class="notice-list">
-        <div class="notice-item">테스트용 메세지 입니다 1</div>
-        <div class="notice-item">테스트용 메세지 입니다 2</div>
-        <div class="notice-item">테스트용 메세지 입니다 3</div>
-      </div>
+      <!-- ✅ 최신글 제거: 최신글은 자유게시판 list 페이지에서 -->
     </div>
 
-    <nav class="footer-nav d-flex justify-content-around text-white">
-      <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/home'">
-        <i class="fas fa-home"></i><small>홈</small>
-      </button>
-      <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/record'">
-        <i class="fas fa-book"></i><small>내 서재</small>
-      </button>
-      <button class="btn btn-dark d-flex flex-column align-items-center"
-              onclick="location.href='/book/recommendation'">
-        <i class="fas fa-search"></i><small>책 추천</small>
-      </button>
-      <button class="btn btn-dark d-flex flex-column align-items-center active" onclick="location.href='/bulletin'">
-        <i class="fas fa-comments"></i><small>게시판</small>
-      </button>
-      <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/mypage'">
-        <i class="fas fa-user"></i><small>내 정보</small>
-      </button>
-    </nav>
+    <div th:replace="fragments/footer-nav :: footer('community')"></div>
   </div>
 </section>
 
-<script>
-
-</script>
 </body>
-
 </html>

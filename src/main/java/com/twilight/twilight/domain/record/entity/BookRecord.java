@@ -1,7 +1,7 @@
 package com.twilight.twilight.domain.record.entity;
 
 import com.twilight.twilight.domain.book.entity.book.Book;
-import com.twilight.twilight.domain.member.entity.Member;
+import com.twilight.twilight.domain.member.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

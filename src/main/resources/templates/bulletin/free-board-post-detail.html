@@ -6,6 +6,7 @@
     <title>게시글 상세</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/footer-nav.css">
     <style>
         @font-face {
             font-family: 'CookieRun-Regular';
@@ -83,6 +84,11 @@
             margin: 0 .35rem;
         }
 
+        .meta-row a:hover {
+            text-decoration: underline;
+            color: #8b5e34;
+        }
+
         .title {
             font-size: 1.1rem;
             font-weight: 550;
@@ -113,37 +119,6 @@
             top: 0;
             background: linear-gradient(#fffaf6, #fffaf6);
             z-index: 2;
-        }
-
-        .footer-nav {
-            background-color: #ead4c5;
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom-left-radius: 1.5rem;
-            border-bottom-right-radius: 1.5rem;
-            flex: 0 0 auto;
-            /* ✅ 하단 고정 영역 */
-        }
-
-        .footer-nav .btn-dark {
-            background: transparent;
-            border: none;
-            color: #4e3b31;
-            flex: 1;
-        }
-
-        .footer-nav .btn-dark.active {
-            color: #c45b5b;
-        }
-
-        .footer-nav .btn-dark i {
-            font-size: 1.2rem;
-            margin-bottom: .25rem;
-        }
-
-        .footer-nav .btn-dark small {
-            font-size: .75rem;
         }
 
         /* 댓글 */
@@ -253,14 +228,21 @@
 
             <!-- 메타 정보 -->
             <div class="meta-row">
-                <span><i class="fa-regular fa-user"></i> <span th:text="${post.name}">작성자</span></span>
+                 <span>
+        <i class="fa-regular fa-user"></i>
+        <a th:href="@{/members/{id}(id=${post.memberId})}"
+           style="color: inherit; text-decoration: none; font-weight: 600;">
+            <span th:text="${post.name}">작성자</span>
+        </a>
+    </span>
                 <span class="meta-sep">|</span>
                 <span><i class="fa-regular fa-clock"></i> <span
                         th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">2025.11.06 12:34</span></span>
                 <span class="meta-sep">|</span>
                 <span><i class="fa-regular fa-eye"></i> <span th:text="${post.views}">0</span></span>
                 <span class="meta-sep">|</span>
-                <span><i class="fa-regular fa-thumbs-up"></i> <span th:text="${post.numberOfRecommendations}">0</span></span>
+                <span><i class="fa-regular fa-thumbs-up"></i> <span
+                        th:text="${post.numberOfRecommendations}">0</span></span>
                 <span class="meta-sep">|</span>
                 <span><i class="fa-regular fa-comments"></i> <span th:text="${post.numberOfComments}">0</span></span>
             </div>
@@ -447,24 +429,7 @@
         <!-- ✅ 스크롤 되는 본문 영역 끝 -->
 
         <!-- 하단 네비게이션 (카드 고정) -->
-        <nav class="footer-nav d-flex justify-content-around text-white">
-            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/home'">
-                <i class="fas fa-home"></i><small>홈</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/record'">
-                <i class="fas fa-book"></i><small>내 서재</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center"
-                    onclick="location.href='/book/recommendation'">
-                <i class="fas fa-search"></i><small>책 추천</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center active" onclick="location.href='/bulletin'">
-                <i class="fas fa-comments"></i><small>게시판</small>
-            </button>
-            <button class="btn btn-dark d-flex flex-column align-items-center" onclick="location.href='/mypage'">
-                <i class="fas fa-user"></i><small>내 정보</small>
-            </button>
-        </nav>
+        <div th:replace="fragments/footer-nav :: footer('community')"></div>
 
     </div>
 
