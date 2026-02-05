@@ -15,3 +15,5 @@ CREATE TABLE follow (
 
 CREATE INDEX idx_post_member_created
     ON free_board_post (member_id, deleted_at ,created_at DESC, free_board_post_id DESC);
+
+
