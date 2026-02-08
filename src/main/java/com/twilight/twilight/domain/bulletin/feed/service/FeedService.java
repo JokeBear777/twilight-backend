@@ -5,14 +5,17 @@ import com.twilight.twilight.domain.bulletin.feed.dto.FeedCursor;
 import com.twilight.twilight.domain.bulletin.feed.dto.FeedCursorRequest;
 import com.twilight.twilight.domain.bulletin.feed.dto.GetFeedPostListDto;
 import com.twilight.twilight.domain.bulletin.feed.heuristic.FeedHeuristicCandidate;
+import com.twilight.twilight.domain.bulletin.feed.heuristic.RelationScoreCalculator;
 import com.twilight.twilight.domain.bulletin.feed.repository.FeedQueryRepository;
 import com.twilight.twilight.domain.bulletin.feed.repository.FeedRepository;
+import com.twilight.twilight.domain.bulletin.feed.stat.AuthorViewStatService;
 import com.twilight.twilight.global.cursor.CursorResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,8 @@ public class FeedService {
     private final FeedRepository feedRepository;
     private final FeedQueryRepository feedQueryRepository;
     private final FeedBuffer feedBuffer;
+    private final AuthorViewStatService authorViewStatService;
+    private final RelationScoreCalculator relationScoreCalculator;
 
 
     //여기서 버퍼있는지 확인하고 없으면 db에서 조회
@@ -41,7 +46,7 @@ public class FeedService {
                     pageSize
             );
 
-            List<Long> getBestEvents = selectBestEventByHeuristic(candidates);
+            List<Long> getBestEvents = selectBestEventByHeuristic(candidates, memberId);
 
             /*
             while(eventIds.size() < pageSize || !getBestEvents.isEmpty()) {
@@ -65,11 +70,22 @@ public class FeedService {
     }
 
     private List<Long> selectBestEventByHeuristic(
-            List<FeedHeuristicCandidate> candidates
+            List<FeedHeuristicCandidate> candidates,
+            Long viewerId
     )  {
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
 
+        List<Long> authorIds = candidates.stream()
+                .map(FeedHeuristicCandidate::targetId)
+                .distinct()
+                .toList();
 
-        return List.of();
+        Map<Long, Integer> relationScoreMap =
+                authorViewStatService.getRelationScore(viewerId, authorIds);
+
+        return relationScoreCalculator.relationScoreCalculate(candidates, relationScoreMap);
     }
 
     private List<GetFeedPostListDto> assemble(List<Long> eventIds) {

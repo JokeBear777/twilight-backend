@@ -1,4 +1,4 @@
-package com.twilight.twilight.domain.bulletin.feed.stat;
+package com.twilight.twilight.infra.feed.stat;
 
 import lombok.AllArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;

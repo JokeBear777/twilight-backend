@@ -1,5 +1,6 @@
 package com.twilight.twilight.domain.bulletin.feed.stat;
 
+import com.twilight.twilight.infra.feed.stat.AuthorViewStatDao;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -31,6 +32,7 @@ public class AuthorViewStatService {
         }
     }
 
+    //
     public Map<Long, Integer> getRelationScore(
             Long viewerId,
             List<Long> authorIds
