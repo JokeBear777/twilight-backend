@@ -2,6 +2,7 @@ package com.twilight.twilight.domain.bulletin.feed.entity;
 
 import com.twilight.twilight.domain.bulletin.feed.type.FeedEventType;
 import jakarta.persistence.*;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
                         columnList = "actor_id, created_at, feed_event_id")
         }
 )
+@Getter
 public class FeedEvent {
 
     @Id

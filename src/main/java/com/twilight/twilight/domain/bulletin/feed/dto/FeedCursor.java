@@ -1,6 +1,7 @@
 package com.twilight.twilight.domain.bulletin.feed.dto;
 
 import com.twilight.twilight.global.cursor.Cursor;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
