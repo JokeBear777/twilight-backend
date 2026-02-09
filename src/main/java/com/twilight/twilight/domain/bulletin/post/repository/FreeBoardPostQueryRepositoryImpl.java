@@ -6,6 +6,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.twilight.twilight.domain.bulletin.post.dto.PostCursor;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostListDto;
 import com.twilight.twilight.domain.bulletin.post.dto.GetFreeBoardPostReplyDto;
+import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPost;
 import com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPostReply;
 import com.twilight.twilight.domain.member.member.entity.QMember;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.twilight.twilight.domain.bulletin.post.entity.QFreeBoardPost.freeBoardPost;
 import static com.twilight.twilight.domain.member.member.entity.QMember.member;
 
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ import static com.twilight.twilight.domain.member.member.entity.QMember.member;
 public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepository{
 
     private final JPAQueryFactory query;
-    QFreeBoardPost qFreeBoardPost = QFreeBoardPost.freeBoardPost;
+    QFreeBoardPost qFreeBoardPost = freeBoardPost;
     QMember qMember = QMember.member;
     QFreeBoardPostReply qFreeBoardPostReply = QFreeBoardPostReply.freeBoardPostReply;
     QFreeBoardPostReply parent = new QFreeBoardPostReply("parent");
@@ -299,4 +301,20 @@ public class FreeBoardPostQueryRepositoryImpl implements FreeBoardPostQueryRepos
                 .limit(size + 1) // hasMore 판단용
                 .fetch();
     }
+
+    @Override
+    public List<FreeBoardPost> findAllByPostIds(List<Long> postIds) {
+        if (postIds == null || postIds.isEmpty()) {
+            return List.of();
+        }
+
+        return query
+                .selectFrom(freeBoardPost)
+                .where(
+                        freeBoardPost.freeBoardPostId.in(postIds),
+                        freeBoardPost.deletedAt.isNull()
+                )
+                .fetch();
+    }
+
 }
