@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>피드</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/footer-nav.css">
+    <link rel="stylesheet" href="/css/bulletin.css">
+
+    <style>
+        .feed-item {
+            border-bottom: 1px solid #eee;
+            padding: 16px 0;
+        }
+
+        .feed-author {
+            font-weight: 600;
+        }
+
+        .feed-time {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .feed-content {
+            margin-top: 8px;
+        }
+
+        .loader {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+<section class="d-flex justify-content-center align-items-center"
+         style="min-height: 100vh;">
+    <div class="card-container">
+
+        <div class="card-header">
+            커뮤니티
+        </div>
+
+        <div class="card-body">
+
+            <!-- 피드/게시판 토글 -->
+            <div class="social-toggle">
+                <a class="social-tab active"
+                   th:href="@{/social/feed}">피드</a>
+                <a class="social-tab"
+                   th:href="@{/bulletin}">게시판</a>
+            </div>
+
+            <!-- 피드 리스트 -->
+            <div id="feed-container"></div>
+
+            <!-- 로딩 영역 -->
+            <div id="feed-loader" class="loader">
+                불러오는 중...
+            </div>
+
+        </div>
+
+        <div th:replace="fragments/footer-nav :: footer('community')"></div>
+    </div>
+</section>
+
+<script>
+    let lastFeedEventId = null;
+    let lastCreatedAt = null;
+    let isLoading = false;
+    const pageSize = 10;
+
+    const container = document.getElementById("feed-container");
+    const loader = document.getElementById("feed-loader");
+
+    async function loadFeed() {
+        if (isLoading) return;
+        isLoading = true;
+        loader.style.display = "block";
+
+        let url = `/api/v1/feed?pageSize=${pageSize}`;
+
+        if (lastFeedEventId && lastCreatedAt) {
+            url += `&lastFeedEventId=${lastFeedEventId}`;
+            url += `&lastCreatedAt=${encodeURIComponent(lastCreatedAt)}`;
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        renderFeed(data.content);
+
+        if (data.nextCursor) {
+            lastFeedEventId = data.nextCursor.lastFeedEventId;
+            lastCreatedAt = data.nextCursor.lastCreatedAt;
+        }
+
+        if (!data.hasNext) {
+            loader.innerText = "더 이상 피드가 없습니다.";
+        }
+
+        isLoading = false;
+    }
+
+    function renderFeed(items) {
+        items.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "feed-item";
+
+            div.innerHTML = `
+                <div class="feed-author">${item.authorName}</div>
+                <div class="feed-time">${item.createdAt}</div>
+                <div class="feed-content">${item.content}</div>
+            `;
+
+            container.appendChild(div);
+        });
+    }
+
+    // 무한 스크롤
+    window.addEventListener("scroll", () => {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+            loadFeed();
+        }
+    });
+
+    // 첫 로딩
+    loadFeed();
+</script>
+
+</body>
+</html>

@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -253,6 +254,11 @@ public class BookService {
     }
 
     private List<GetBookInfoDto> pickByOneTag(List<Long> sortedTagIds) {
+
+        if (sortedTagIds == null || sortedTagIds.isEmpty()) {
+            throw new IllegalArgumentException("추천 태그가 없습니다.");
+        }
+
         for (Long baseTagId : sortedTagIds) {
 
             List<GetBookInfoDto> candidates =
