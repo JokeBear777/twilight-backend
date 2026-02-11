@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -52,6 +53,13 @@ public class GlobalExceptionHandler {
         String errorMessage = e.getMessage();
         model.addAttribute("errorMessage", errorMessage);
         return "error-custom";
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public void handleNoResourceFundException(
+            NoResourceFoundException ex
+    ) {
+        log.info("NoResourceFoundException");
     }
 
 

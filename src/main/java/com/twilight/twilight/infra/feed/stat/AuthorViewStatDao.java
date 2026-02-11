@@ -1,6 +1,7 @@
 package com.twilight.twilight.infra.feed.stat;
 
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +16,30 @@ import java.util.stream.Collectors;
 public class AuthorViewStatDao {
 
     private final JdbcTemplate jdbcTemplate;
+
+    public int countViewerRelation(Long viewerId) {
+        String sql = """
+            SELECT count(*) 
+            FROM author_view_stat
+            WHERE viewer_id = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, viewerId);
+        return count == null ? 0 : count;
+    }
+
+    public void pruneOldestRelations(Long viewerId, int pruneCount) {
+        String sql = """
+                DELETE 
+                FROM author_view_stat
+                WHERE viewer_id = ?
+                ORDER BY last_viewed_at
+                LIMIT ?
+                """;
+
+        jdbcTemplate.update(sql, viewerId, pruneCount);
+    }
+
 
     public void increaseViewCount(Long viewerId, Long authorId) {
         String sql = """

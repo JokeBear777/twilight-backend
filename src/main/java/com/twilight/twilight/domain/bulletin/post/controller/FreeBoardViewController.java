@@ -57,7 +57,7 @@ public class FreeBoardViewController {
             @PathVariable("post-id") Long postId,
             Model model
     ) {
-        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.getFreeBoardPostDetail(postId);
+        GetFreeBoardPostDetailDto postDetailDto = freeBoardPostService.viewFreeBoardPostDetail(userDetails.getMember().getMemberId() ,postId);
         model.addAttribute("post", postDetailDto);
 
         List<GetFreeBoardPostReplyDto> dtoList = freeBoardPostService.getRepliesByPage(postId, 1L);
