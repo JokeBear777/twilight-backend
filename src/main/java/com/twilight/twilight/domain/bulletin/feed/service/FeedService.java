@@ -70,7 +70,7 @@ public class FeedService {
             List<FeedHeuristicCandidate> candidates = feedQueryRepository.findHeuristicCandidatesByCursor(
                     cursor,
                     memberId,
-                    pageSize
+                    pageSize * 10
             );
 
             List<Long> getBestEvents = selectBestEventByHeuristic(candidates, memberId);
