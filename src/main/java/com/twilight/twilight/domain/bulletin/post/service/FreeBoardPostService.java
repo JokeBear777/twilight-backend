@@ -1,5 +1,8 @@
 package com.twilight.twilight.domain.bulletin.post.service;
 
+import com.twilight.twilight.domain.bulletin.feed.service.FeedService;
+import com.twilight.twilight.domain.bulletin.feed.stat.AuthorViewStatService;
+import com.twilight.twilight.domain.bulletin.feed.type.FeedEventType;
 import com.twilight.twilight.domain.bulletin.post.common.RecommendResult;
 import com.twilight.twilight.domain.bulletin.post.dto.*;
 import com.twilight.twilight.domain.bulletin.post.entity.FreeBoardPost;
@@ -47,6 +50,8 @@ public class FreeBoardPostService {
     private final ThresholdGenerator thresholdGenerator;
     private final NgramGenerator ngramGenerator;
     private final FreeBoardSearchRepository freeBoardSearchRepository;
+    private final AuthorViewStatService authorViewStatService;
+    private final FeedService feedService;
 
 
     private static final String TOTAL_COUNT_KEY = "freeBoard:totalCount";
@@ -68,7 +73,20 @@ public class FreeBoardPostService {
     }
 
     @Transactional
+    public GetFreeBoardPostDetailDto viewFreeBoardPostDetail(Long viewerId, Long postId) {
+
+        return freeBoardPostRepository.findByFreeBoardPostId(postId)
+                .map(post -> {
+                    post.incrementViews();
+                    authorViewStatService.recordAuthorView(viewerId, post.getMember().getMemberId());
+                    return GetFreeBoardPostDetailDto.fromEntity(post);
+                })
+                .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
+    }
+
+    @Transactional
     public GetFreeBoardPostDetailDto getFreeBoardPostDetail(Long postId) {
+
         return freeBoardPostRepository.findByFreeBoardPostId(postId)
                 .map(post -> {
                     post.incrementViews();
@@ -153,9 +171,15 @@ public class FreeBoardPostService {
                 )
                 .build();
 
-        freeBoardPostRepository.save(post);
+        FreeBoardPost saved = freeBoardPostRepository.save(post);
 
         freeBoardSearchSyncPublisher.publishPostUpsert(post.getFreeBoardPostId());
+
+        feedService.createFeedEvent(
+                member.getMemberId(),
+                FeedEventType.FREE_BOARD_POST_CREATED,
+                saved.getFreeBoardPostId()
+        );
     }
 
     @Transactional
@@ -224,6 +248,8 @@ public class FreeBoardPostService {
         post.softDelete();
 
         freeBoardSearchSyncPublisher.publishPostDelete(post.getFreeBoardPostId());
+
+        feedService.deleteFeedEvent(post.getFreeBoardPostId());
     }
 
     @Transactional

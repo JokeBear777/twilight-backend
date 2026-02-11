@@ -36,6 +36,11 @@
             padding: 20px;
             color: #999;
         }
+
+        .feed-item:hover {
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -83,28 +88,46 @@
 
     async function loadFeed() {
         if (isLoading) return;
+
         isLoading = true;
         loader.style.display = "block";
 
-        let url = `/api/v1/feed?pageSize=${pageSize}`;
+        try {
+            let url = `/api/v1/feed?pageSize=${pageSize}`;
 
-        if (lastFeedEventId && lastCreatedAt) {
-            url += `&lastFeedEventId=${lastFeedEventId}`;
-            url += `&lastCreatedAt=${encodeURIComponent(lastCreatedAt)}`;
-        }
+            if (lastFeedEventId && lastCreatedAt) {
+                url += `&lastFeedEventId=${lastFeedEventId}`;
+                url += `&lastCreatedAt=${encodeURIComponent(lastCreatedAt)}`;
+            }
 
-        const response = await fetch(url);
-        const data = await response.json();
+            const response = await fetch(url);
 
-        renderFeed(data.content);
+            if (!response.ok) {
+                throw new Error("API 요청 실패");
+            }
 
-        if (data.nextCursor) {
-            lastFeedEventId = data.nextCursor.lastFeedEventId;
-            lastCreatedAt = data.nextCursor.lastCreatedAt;
-        }
+            const result = await response.json();
 
-        if (!data.hasNext) {
-            loader.innerText = "더 이상 피드가 없습니다.";
+            // 🔥 여기 핵심 수정
+            if (result.data && result.data.length > 0) {
+                renderFeed(result.data);
+            }
+
+            if (result.nextCursor) {
+                lastFeedEventId = result.nextCursor.lastFeedEventId;
+                lastCreatedAt = result.nextCursor.lastCreatedAt;
+            }
+
+            if (!result.hasNext) {
+                loader.innerText = "더 이상 피드가 없습니다.";
+                window.removeEventListener("scroll", handleScroll);
+            } else {
+                loader.style.display = "none";
+            }
+
+        } catch (error) {
+            console.error("피드 로딩 실패:", error);
+            loader.innerText = "피드를 불러오지 못했습니다.";
         }
 
         isLoading = false;
@@ -116,23 +139,40 @@
             div.className = "feed-item";
 
             div.innerHTML = `
-                <div class="feed-author">${item.authorName}</div>
-                <div class="feed-time">${item.createdAt}</div>
-                <div class="feed-content">${item.content}</div>
-            `;
+            <div class="feed-author">${item.authorName}</div>
+            <div class="feed-time">${formatDate(item.createdAt)}</div>
+            <div class="feed-content">${item.content}</div>
+        `;
+
+            // 클릭 시 상세페이지 이동
+            div.style.cursor = "pointer";
+
+            div.addEventListener("click", () => {
+                if (item.eventType === "FREE_BOARD_POST_CREATED") {
+                    window.location.href = `/bulletin/free-board/${item.postId}`;
+                }
+            });
 
             container.appendChild(div);
         });
     }
 
-    // 무한 스크롤
-    window.addEventListener("scroll", () => {
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+
+    function handleScroll() {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
             loadFeed();
         }
-    });
+    }
 
-    // 첫 로딩
+    // 무한스크롤 이벤트 등록
+    window.addEventListener("scroll", handleScroll);
+
+    // 최초 로딩
     loadFeed();
 </script>
 

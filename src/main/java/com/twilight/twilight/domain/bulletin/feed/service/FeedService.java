@@ -13,7 +13,9 @@ import com.twilight.twilight.domain.bulletin.feed.repository.FeedEventRepository
 import com.twilight.twilight.domain.bulletin.feed.stat.AuthorViewStatService;
 import com.twilight.twilight.domain.bulletin.feed.type.FeedEventType;
 import com.twilight.twilight.global.cursor.CursorResponse;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class FeedService {
 
     private final FeedEventRepository feedEventRepository;
@@ -55,6 +58,18 @@ public class FeedService {
                 ));
     }
 
+    public void createFeedEvent(
+            Long actorId,
+            FeedEventType eventType,
+            Long targetId
+    ) {
+        feedEventRepository.save(new FeedEvent(actorId, eventType, targetId));
+    }
+
+    public void deleteFeedEvent(Long targetId) {
+        feedEventRepository.deleteById(targetId);
+    }
+
 
     //여기서 버퍼있는지 확인하고 없으면 db에서 조회
     public List<GetFeedPostListDto> getFeedByCursor(
@@ -66,6 +81,8 @@ public class FeedService {
 
         List<Long> eventIds = feedBuffer.pop(memberId, pageSize);
 
+        //log.info("[Test] eventIds = {}", eventIds);
+
         if (eventIds.size() < pageSize) {
             List<FeedHeuristicCandidate> candidates = feedQueryRepository.findHeuristicCandidatesByCursor(
                     cursor,
@@ -73,8 +90,11 @@ public class FeedService {
                     pageSize * 10
             );
 
+            //log.info("[Test] candidates = {}", candidates);
+
             List<Long> getBestEvents = selectBestEventByHeuristic(candidates, memberId);
 
+            //log.info("[Test] bestEvents = {}", getBestEvents);
             feedBuffer.push(memberId, getBestEvents);
         }
 

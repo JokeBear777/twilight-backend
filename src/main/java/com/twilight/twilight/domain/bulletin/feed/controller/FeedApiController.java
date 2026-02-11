@@ -6,6 +6,7 @@ import com.twilight.twilight.domain.bulletin.feed.service.FeedService;
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import com.twilight.twilight.global.cursor.CursorResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/feed")
 @RequiredArgsConstructor
+@Slf4j
 public class FeedApiController {
 
     private final FeedService feedService;
@@ -31,6 +33,7 @@ public class FeedApiController {
                 feedRequest,
                 customUserDetails.getMember().getMemberId());
 
+        //log.info("[Test] DtoList = {}", listDtos);
         return feedService.getCursorResponse(listDtos, pageSize);
     }
 
