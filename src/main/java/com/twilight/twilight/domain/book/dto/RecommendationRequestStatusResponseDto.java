@@ -14,5 +14,6 @@ public class RecommendationRequestStatusResponseDto {
     private Long requestId;
     private RecommendationRequestStatus status;
     private boolean completed;
+    private int retryCount;
     private String message;
 }

@@ -2,6 +2,7 @@ package com.twilight.twilight.global.gateway.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.twilight.twilight.global.gateway.ai.dto.AiRecommendationDlqPayload;
 import com.twilight.twilight.global.gateway.ai.dto.AiRecommendationPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class RedisAiGateway implements AiGateway {
 
     private static final String STREAM_KEY = "ai:recommend";
+    private static final String DLQ_STREAM_KEY = "ai:recommend:dlq";
     private static final String GROUP_NAME = "ai-consumers";
     private static final String PRODUCER_ID = "spring-backend";
 
@@ -98,6 +100,33 @@ public class RedisAiGateway implements AiGateway {
             redisTemplate.opsForStream().add(STREAM_KEY, body);
         } catch (Exception e) {
             log.error("Redis Stream publish failed. streamKey={}, requestId={}", STREAM_KEY, requestId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void sendToDlq(AiRecommendationDlqPayload payload) {
+        Long requestId = payload == null ? null : payload.getRequestId();
+        try {
+            String json = new ObjectMapper().writeValueAsString(payload);
+            log.info("DLQ Payload JSON = {}", json);
+        } catch (JsonProcessingException e) {
+            log.error("DLQ payload serialization failed. requestId={}", requestId, e);
+        }
+
+        Map<String, Object> body = Map.of(
+                "requestId", payload.getRequestId(),
+                "memberId", payload.getMemberId(),
+                "reason", payload.getReason(),
+                "retryCount", payload.getRetryCount(),
+                "failedAt", payload.getFailedAt().toString(),
+                "payload", payload.getPayload()
+        );
+
+        try {
+            redisTemplate.opsForStream().add(DLQ_STREAM_KEY, body);
+        } catch (Exception e) {
+            log.error("Redis DLQ Stream publish failed. streamKey={}, requestId={}", DLQ_STREAM_KEY, requestId, e);
             throw e;
         }
     }

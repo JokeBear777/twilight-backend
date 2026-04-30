@@ -51,6 +51,11 @@ public class RecommendationRequest {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    public void markProcessing() {
+        this.status = RecommendationRequestStatus.PROCESSING;
+        this.errorMessage = null;
+    }
+
     public void markSuccess() {
         this.status = RecommendationRequestStatus.SUCCESS;
         this.completedAt = LocalDateTime.now();
@@ -62,7 +67,20 @@ public class RecommendationRequest {
         this.errorMessage = errorMessage;
     }
 
+    public void markDlq(String errorMessage) {
+        this.status = RecommendationRequestStatus.DLQ;
+        this.errorMessage = errorMessage;
+    }
+
+    public void increaseRetryCount() {
+        this.retryCount++;
+    }
+
     public boolean isSuccess() {
         return RecommendationRequestStatus.SUCCESS.equals(this.status);
+    }
+
+    public boolean isDlq() {
+        return RecommendationRequestStatus.DLQ.equals(this.status);
     }
 }

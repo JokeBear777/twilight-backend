@@ -26,6 +26,7 @@ import com.twilight.twilight.domain.member.member.repository.PersonalityReposito
 import com.twilight.twilight.global.authentication.springSecurity.domain.CustomUserDetails;
 import com.twilight.twilight.global.cache.MemberQuestionCache;
 import com.twilight.twilight.global.gateway.ai.AiGateway;
+import com.twilight.twilight.global.gateway.ai.dto.AiRecommendationDlqPayload;
 import com.twilight.twilight.global.gateway.ai.dto.AiRecommendationPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -48,6 +50,7 @@ public class BookService {
     private static final int MAX = 15;
     private static final int RANDOM_PICK = 10;
     private static final int TAG_ANSWER_COUNT = 5;
+    private static final int MAX_RETRY_COUNT = 3;
 
     private final MemberQuestionRepository memberQuestionRepository;
     private final MemberQuestionAnswerRepository memberQuestionAnswerRepository;
@@ -594,10 +597,11 @@ public class BookService {
         );
 
         try {
+            recommendationRequest.markProcessing();
+            recommendationRequestRepository.save(recommendationRequest);
             aiGateway.send(aiRecommendationPayload);
         } catch (Exception e) {
-            recommendationRequest.markFailed(e.getMessage());
-            recommendationRequestRepository.save(recommendationRequest);
+            handleRetryableFailure(recommendationRequest, e, aiRecommendationPayload);
             log.error("Failed to publish recommendation request. requestId={}", recommendationRequest.getId(), e);
             throw e;
         }
@@ -673,15 +677,17 @@ public class BookService {
     public void completeRecommendation(
             CompleteRecommendationDto completeRecommendationDto,
             String token) {
+        Long requestId = completeRecommendationDto == null ? null : completeRecommendationDto.getRequestId();
+
         if (!Objects.equals(token, System.getenv("AI_SECRET_TOKEN"))) {
-            log.info("식별되지 않은 ai 서버 접근");
+            log.info("Invalid AI server token. requestId={}", requestId);
+            markNonRetryableFailureIfRequestExists(requestId, "Invalid AI server token");
             return;
         }
         //추천 결과 중복 방지하기 위해 지움
-        Long requestId = completeRecommendationDto.getRequestId();
         if (requestId == null) {
             log.warn("AI recommendation callback ignored because requestId is missing. memberId={}",
-                    completeRecommendationDto.getMemberId());
+                    completeRecommendationDto == null ? null : completeRecommendationDto.getMemberId());
             return;
         }
 
@@ -699,11 +705,41 @@ public class BookService {
             return;
         }
 
+        if (recommendationRequest.isDlq()) {
+            log.warn("AI recommendation callback ignored because request is DLQ. requestId={}", requestId);
+            return;
+        }
+
+        if (!RecommendationRequestStatus.PROCESSING.equals(recommendationRequest.getStatus())) {
+            log.warn("AI recommendation callback ignored because request is not processing. requestId={}, status={}",
+                    requestId,
+                    recommendationRequest.getStatus());
+            return;
+        }
+
+        if (completeRecommendationDto.getMemberId() == null
+                || completeRecommendationDto.getBookId() == null
+                || completeRecommendationDto.getAiAnswer() == null) {
+            handleNonRetryableFailure(recommendationRequest, "Invalid AI recommendation callback payload");
+            log.warn("AI recommendation callback ignored because required payload is missing. requestId={}", requestId);
+            return;
+        }
+
         if (!Objects.equals(recommendationRequest.getMemberId(), completeRecommendationDto.getMemberId())) {
+            handleNonRetryableFailure(recommendationRequest, "AI recommendation callback memberId mismatch");
             log.warn("AI recommendation callback memberId mismatch. requestId={}, requestMemberId={}, callbackMemberId={}",
                     requestId,
                     recommendationRequest.getMemberId(),
                     completeRecommendationDto.getMemberId());
+            return;
+        }
+
+        if (!memberRepository.existsById(completeRecommendationDto.getMemberId())) {
+            handleNonRetryableFailure(recommendationRequest, "Member not found");
+            log.warn("AI recommendation callback ignored because member was not found. requestId={}, memberId={}",
+                    requestId,
+                    completeRecommendationDto.getMemberId());
+            return;
         }
 
         recommendationRepository.deleteByMemberId(completeRecommendationDto.getMemberId());
@@ -718,6 +754,76 @@ public class BookService {
         recommendationRequest.markSuccess();
     }
 
+    private void handleRetryableFailure(
+            RecommendationRequest request,
+            Exception e,
+            AiRecommendationPayload payload
+    ) {
+        request.increaseRetryCount();
+        String errorMessage = buildErrorMessage(e);
+
+        if (request.getRetryCount() >= MAX_RETRY_COUNT) {
+            request.markDlq(errorMessage);
+            recommendationRequestRepository.save(request);
+            publishDlq(request, errorMessage, payload);
+        } else {
+            request.markFailed(errorMessage);
+            recommendationRequestRepository.save(request);
+        }
+    }
+
+    private void publishDlq(
+            RecommendationRequest request,
+            String reason,
+            AiRecommendationPayload payload
+    ) {
+        try {
+            aiGateway.sendToDlq(
+                    AiRecommendationDlqPayload.builder()
+                            .requestId(request.getId())
+                            .memberId(request.getMemberId())
+                            .reason(reason)
+                            .retryCount(request.getRetryCount())
+                            .failedAt(LocalDateTime.now())
+                            .payload(payload)
+                            .build()
+            );
+        } catch (Exception dlqPublishException) {
+            log.error("Failed to publish recommendation request to DLQ stream. requestId={}",
+                    request.getId(),
+                    dlqPublishException);
+        }
+    }
+
+    private void handleNonRetryableFailure(RecommendationRequest request, String message) {
+        request.markFailed(message);
+        recommendationRequestRepository.save(request);
+    }
+
+    private void markNonRetryableFailureIfRequestExists(Long requestId, String message) {
+        if (requestId == null) {
+            return;
+        }
+
+        recommendationRequestRepository.findByIdForUpdate(requestId)
+                .filter(request -> !request.isSuccess())
+                .filter(request -> !request.isDlq())
+                .ifPresent(request -> handleNonRetryableFailure(request, message));
+    }
+
+    private String buildErrorMessage(Exception e) {
+        if (e == null) {
+            return "Unknown retryable failure";
+        }
+
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            return e.getClass().getSimpleName();
+        }
+
+        return message;
+    }
+
     @Transactional(readOnly = true)
     public Optional<RecommendationRequestStatusResponseDto> getLatestRecommendationRequestStatus(Long memberId) {
         return recommendationRequestRepository.findTopByMemberIdOrderByCreatedAtDesc(memberId)
@@ -725,6 +831,7 @@ public class BookService {
                         .requestId(recommendationRequest.getId())
                         .status(recommendationRequest.getStatus())
                         .completed(RecommendationRequestStatus.SUCCESS.equals(recommendationRequest.getStatus()))
+                        .retryCount(recommendationRequest.getRetryCount())
                         .message(recommendationRequest.getErrorMessage())
                         .build());
     }
