@@ -5,6 +5,8 @@ import com.twilight.twilight.domain.book.entity.book.Book;
 import com.twilight.twilight.domain.book.entity.book.BookTags;
 import com.twilight.twilight.domain.book.entity.question.MemberQuestion;
 import com.twilight.twilight.domain.book.entity.recommendation.Recommendation;
+import com.twilight.twilight.domain.book.entity.recommendation.RecommendationRequest;
+import com.twilight.twilight.domain.book.entity.recommendation.RecommendationRequestStatus;
 import com.twilight.twilight.domain.book.entity.tag.Tag;
 import com.twilight.twilight.domain.book.infra.stats.TagStatsRepository;
 import com.twilight.twilight.domain.book.repository.book.BookQueryRepository;
@@ -12,6 +14,7 @@ import com.twilight.twilight.domain.book.repository.book.BookRepository;
 import com.twilight.twilight.domain.book.repository.question.AnswerTagMappingRepository;
 import com.twilight.twilight.domain.book.repository.question.MemberQuestionAnswerRepository;
 import com.twilight.twilight.domain.book.repository.question.MemberQuestionRepository;
+import com.twilight.twilight.domain.book.repository.recommendation.RecommendationRequestRepository;
 import com.twilight.twilight.domain.book.repository.recommendation.RecommendationRepository;
 import com.twilight.twilight.domain.book.repository.tag.BookTagsRepository;
 import com.twilight.twilight.domain.book.repository.tag.TagRepository;
@@ -61,6 +64,7 @@ public class BookService {
     private final TagRepository tagRepository;
     private final BookQueryRepository bookQueryRepository;
     private final TagStatsRepository tagStatsRepository;
+    private final RecommendationRequestRepository recommendationRequestRepository;
 
     public QuestionAnswerResponseDto createCategoryQuestionAndAnswer() {
         MemberQuestion categoryQuestion =
@@ -182,7 +186,6 @@ public class BookService {
         return tagList;
     }
 
-    @Transactional(readOnly = true)
     public void requestRecommendationVer2(
             BookRecommendationRequestDto request,
             CustomUserDetails userDetails
@@ -572,7 +575,14 @@ public class BookService {
 
         AiRecommendationPayload.MemberInfo memberInfo = mapMemberToPayload(member, request, tagList);
         List<AiRecommendationPayload.BooksInfo> booksInfoList = mapBookListToPayload(bookList);
+        RecommendationRequest recommendationRequest = recommendationRequestRepository.save(
+                RecommendationRequest.builder()
+                        .memberId(member.getMemberId())
+                        .status(RecommendationRequestStatus.PENDING)
+                        .build()
+        );
         AiRecommendationPayload aiRecommendationPayload = AiRecommendationPayload.builder()
+                .requestId(recommendationRequest.getId())
                 .memberInfo(memberInfo)
                 .bookInfo(booksInfoList)
                 .build();
@@ -583,7 +593,14 @@ public class BookService {
                         .collect(Collectors.toList())
         );
 
-        aiGateway.send(aiRecommendationPayload);
+        try {
+            aiGateway.send(aiRecommendationPayload);
+        } catch (Exception e) {
+            recommendationRequest.markFailed(e.getMessage());
+            recommendationRequestRepository.save(recommendationRequest);
+            log.error("Failed to publish recommendation request. requestId={}", recommendationRequest.getId(), e);
+            throw e;
+        }
     }
 
     private AiRecommendationPayload.MemberInfo mapMemberToPayload (
@@ -652,14 +669,43 @@ public class BookService {
                 .toList();
     }
 
+    @Transactional
     public void completeRecommendation(
             CompleteRecommendationDto completeRecommendationDto,
             String token) {
-        if (! token.equals(System.getenv("AI_SECRET_TOKEN"))) {
+        if (!Objects.equals(token, System.getenv("AI_SECRET_TOKEN"))) {
             log.info("식별되지 않은 ai 서버 접근");
             return;
         }
         //추천 결과 중복 방지하기 위해 지움
+        Long requestId = completeRecommendationDto.getRequestId();
+        if (requestId == null) {
+            log.warn("AI recommendation callback ignored because requestId is missing. memberId={}",
+                    completeRecommendationDto.getMemberId());
+            return;
+        }
+
+        Optional<RecommendationRequest> recommendationRequestOptional =
+                recommendationRequestRepository.findByIdForUpdate(requestId);
+
+        if (recommendationRequestOptional.isEmpty()) {
+            log.warn("AI recommendation callback ignored because request was not found. requestId={}", requestId);
+            return;
+        }
+
+        RecommendationRequest recommendationRequest = recommendationRequestOptional.get();
+        if (recommendationRequest.isSuccess()) {
+            log.info("Duplicate AI recommendation callback ignored. requestId={}", requestId);
+            return;
+        }
+
+        if (!Objects.equals(recommendationRequest.getMemberId(), completeRecommendationDto.getMemberId())) {
+            log.warn("AI recommendation callback memberId mismatch. requestId={}, requestMemberId={}, callbackMemberId={}",
+                    requestId,
+                    recommendationRequest.getMemberId(),
+                    completeRecommendationDto.getMemberId());
+        }
+
         recommendationRepository.deleteByMemberId(completeRecommendationDto.getMemberId());
 
         recommendationRepository.save(
@@ -669,6 +715,18 @@ public class BookService {
                         .aiAnswer(completeRecommendationDto.getAiAnswer())
                         .build()
         );
+        recommendationRequest.markSuccess();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<RecommendationRequestStatusResponseDto> getLatestRecommendationRequestStatus(Long memberId) {
+        return recommendationRequestRepository.findTopByMemberIdOrderByCreatedAtDesc(memberId)
+                .map(recommendationRequest -> RecommendationRequestStatusResponseDto.builder()
+                        .requestId(recommendationRequest.getId())
+                        .status(recommendationRequest.getStatus())
+                        .completed(RecommendationRequestStatus.SUCCESS.equals(recommendationRequest.getStatus()))
+                        .message(recommendationRequest.getErrorMessage())
+                        .build());
     }
 
     public Optional<Recommendation> findRecommendationOnly(Long memberId) {
