@@ -3,6 +3,7 @@ package com.twilight.twilight.domain.book.controller;
 import com.twilight.twilight.domain.book.dto.BookRecommendationRequestDto;
 import com.twilight.twilight.domain.book.dto.CompleteRecommendationDto;
 import com.twilight.twilight.domain.book.dto.QuestionAnswerResponseDto;
+import com.twilight.twilight.domain.book.dto.RecommendationRequestStatusResponseDto;
 import com.twilight.twilight.domain.book.dto.RecommendationViewDto;
 import com.twilight.twilight.domain.book.entity.recommendation.Recommendation;
 import com.twilight.twilight.domain.book.service.BookService;
@@ -63,6 +64,16 @@ public class BookController {
         log.info("AI 서버로부터 추천 결과 받음");
         bookService.completeRecommendation(completeRecommendationDto,token);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/recommendation/status")
+    @ResponseBody
+    public ResponseEntity<RecommendationRequestStatusResponseDto> getRecommendationStatus(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return bookService.getLatestRecommendationRequestStatus(userDetails.getMember().getMemberId())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     //pooling 방식으로 지속적인 요청

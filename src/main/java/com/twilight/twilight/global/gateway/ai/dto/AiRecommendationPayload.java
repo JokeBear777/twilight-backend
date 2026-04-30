@@ -12,6 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class AiRecommendationPayload {
+    private Long requestId;
     private MemberInfo memberInfo;
     private List<BooksInfo> bookInfo;
 

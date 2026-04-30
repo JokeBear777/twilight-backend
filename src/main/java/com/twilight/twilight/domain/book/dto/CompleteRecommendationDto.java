@@ -1,11 +1,16 @@
 package com.twilight.twilight.domain.book.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Lob;
 import lombok.Data;
 
 @Data
 public class CompleteRecommendationDto {
+
+    @JsonProperty("requestId")
+    @JsonAlias("request_id")
+    private Long requestId;
 
     @JsonProperty("member_id")
     private Long memberId;

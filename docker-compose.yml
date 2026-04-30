@@ -1,29 +1,31 @@
 version: '3.8'
 
 services:
-  twilight-back:
-    build:
-      context: .
-    container_name: twilight-back
-    ports:
-      - "80:8080"
-    restart: always
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
-    networks:
-      - twilight-net
+
+
+  #twilight-back:
+   # build:
+    #  context: .
+    #container_name: twilight-back
+    #ports:
+     # - "80:8080"
+    #restart: always
+    #depends_on:
+     # redis:
+      #  condition: service_healthy
+      #mysql:
+       # condition: service_healthy
+    #environment:
+      #SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      #SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME}
+      #SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      #SPRING_REDIS_HOST: redis
+      #SPRING_REDIS_PORT: 6379
+    #networks:
+      #- twilight-net
 
   redis:
-    image: redis:7
+    image: redis:8.0
     container_name: redis
     ports:
       - "6379:6379"
@@ -43,7 +45,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: twilight
     ports:
-      - "3306:3306"
+      - "3307:3306"
     restart: always
     volumes:
       - mysql_data:/var/lib/mysql
